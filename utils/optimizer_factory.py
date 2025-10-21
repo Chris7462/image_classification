@@ -43,8 +43,8 @@ def create_scheduler(optimizer, cfg):
 
     if sched_type == "step_lr":
         return optim.lr_scheduler.StepLR(
-                optimizer, 
-                step_size=cfg.scheduler.step_size, 
+                optimizer,
+                step_size=cfg.scheduler.step_size,
                 gamma=cfg.scheduler.gamma
                 )
     elif sched_type == "cosine":

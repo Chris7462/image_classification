@@ -1,10 +1,10 @@
 import torch
-from tqdm import tqdm
+
 
 def train_one_epoch(model, loader, optimizer, criterion, device):
     model.train()
     total_loss, correct, total = 0.0, 0, 0
-    for imgs, labels in tqdm(loader, desc="Training", leave=False):
+    for imgs, labels in loader:
         imgs, labels = imgs.to(device), labels.to(device)
         optimizer.zero_grad()
         outputs = model(imgs)
@@ -20,7 +20,7 @@ def evaluate(model, loader, criterion, device):
     model.eval()
     total_loss, correct, total = 0.0, 0, 0
     with torch.no_grad():
-        for imgs, labels in tqdm(loader, desc="Evaluating", leave=False):
+        for imgs, labels in loader:
             imgs, labels = imgs.to(device), labels.to(device)
             outputs = model(imgs)
             loss = criterion(outputs, labels)

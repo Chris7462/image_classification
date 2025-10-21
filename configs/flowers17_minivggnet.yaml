@@ -6,7 +6,7 @@ dataset:
   transforms:
     resize: 64
     crop: 64
-    random_resized_crop: true
+    random_resized_crop: false
     random_affine:
       degrees: 30
       translate: [0.1, 0.1]
@@ -32,18 +32,19 @@ loss:
 
 # Optimizer config
 optimizer:
-  type: adam
-  lr: 0.001
+  type: SGD
+  lr: 0.05
   weight_decay: 0.0
+  momentum: 0.0
 
 # Scheduler config
 scheduler:
-  type: step_lr
-  step_size: 7
-  gamma: 0.1
+  type: none
+  # step_size: 5
+  # gamma: 0.1
 
 # Training config
 training:
   epochs: 50
-  device: cuda
+  device: auto  # 'auto' for automatic detection, or specify 'cuda', 'mps', 'cpu'
   checkpoint_path: best_minivggnet_model.pth
