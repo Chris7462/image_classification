@@ -1,0 +1,51 @@
+# Dataset config
+dataset:
+  name: flowers17
+  batch_size: 32
+  num_workers: 4
+  transforms:
+    resize: 256
+    crop: 224
+    random_resized_crop: true
+    random_affine:
+      degrees: 30
+      translate: [0.1, 0.1]
+      shear: 0.2
+      scale: [0.8, 1.2]
+    random_horizontal_flip: true
+    # color_jitter:
+    #   brightness: 0.2
+    #   contrast: 0.2
+    #   saturation: 0.2
+    #   hue: 0.1
+    # random_grayscale:
+    #   p: 0.1  # 10% chance to convert to grayscale
+
+# Model config
+model:
+  backbone: vgg16
+  num_classes: 17
+  pretrained: true
+  freeze_backbone: true
+
+# Loss config
+loss:
+  type: cross_entropy
+
+# Optimizer config
+optimizer:
+  type: adam
+  lr: 0.0001
+  weight_decay: 0.0
+
+# Scheduler config
+scheduler:
+  type: step_lr
+  step_size: 5
+  gamma: 0.1
+
+# Training config
+training:
+  epochs: 10
+  device: cuda
+  checkpoint_path: best_model.pth
