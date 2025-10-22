@@ -6,19 +6,21 @@ stratified train/validation/test splits. Supports custom datasets and standard P
 
 Key Features:
     - Stratified splitting to maintain class distribution across splits
-    - Configurable split ratios (default: 70% train, 15% val, 15% test)
+    - Configurable split ratios from dataset config sections
     - Separate transforms for training (with augmentation) and validation/test
     - DataLoader creation with configurable batch size and workers
 
 Functions:
     _split_dataset: Split dataset indices into train/val/test with stratification
+    _create_flowers17_loaders: Create Flowers17 dataset loaders
+    _create_cifar10_loaders: Create CIFAR10 dataset loaders
     get_data_loaders: Create train/val/test DataLoaders from config
 
 Example:
     >>> from utils import Config
     >>> from data import get_data_loaders
     >>> cfg = Config('configs/flowers17_vgg.yaml')
-    >>> train_loader, val_loader, test_loader = get_data_loaders(cfg)  # type: DataLoader
+    >>> train_loader, val_loader, test_loader = get_data_loaders(cfg)
 """
 
 import os
@@ -30,19 +32,27 @@ from .transforms import get_transforms
 
 def _split_dataset(dataset, train_ratio=0.7, val_ratio=0.15, test_ratio=0.15, random_state=42):
     """
-    Split dataset into train/val/test sets.
+    Split dataset into train/val/test sets with stratification.
 
     Args:
-        dataset: PyTorch dataset
-        train_ratio: Proportion for training set
-        val_ratio: Proportion for validation set
-        test_ratio: Proportion for test set
-        random_state: Random seed for reproducibility
+        dataset: PyTorch dataset with .targets attribute
+        train_ratio: Proportion for training set (default: 0.7)
+        val_ratio: Proportion for validation set (default: 0.15)
+        test_ratio: Proportion for test set (default: 0.15)
+        random_state: Random seed for reproducibility (default: 42)
 
     Returns:
         tuple: (train_idx, val_idx, test_idx) - Indices for each split
+
+    Raises:
+        AssertionError: If split ratios don't sum to 1.0
     """
-    assert abs(train_ratio + val_ratio + test_ratio - 1.0) < 1e-6, "Ratios must sum to 1"
+    # Validate split ratios
+    ratio_sum = train_ratio + val_ratio + test_ratio
+    assert abs(ratio_sum - 1.0) < 1e-6, (
+        f"Split ratios must sum to 1.0, got {ratio_sum:.6f} "
+        f"(train={train_ratio}, val={val_ratio}, test={test_ratio})"
+    )
 
     num_samples = len(dataset)
     indices = list(range(num_samples))
@@ -69,31 +79,69 @@ def _split_dataset(dataset, train_ratio=0.7, val_ratio=0.15, test_ratio=0.15, ra
 
 def _create_flowers17_loaders(cfg, train_tf, val_tf):
     """
-    Create DataLoaders for Flowers17 dataset.
+    Create DataLoaders for Flowers17 dataset from config.
 
     Args:
-        cfg: Configuration object
+        cfg: Configuration object with dataset.config section
         train_tf: Training transforms
         val_tf: Validation/test transforms
 
     Returns:
         tuple: (train_set, val_set, test_set) - Dataset subsets
-    """
-    data_root = "/data/kaggle/flowers17"
 
+    Raises:
+        ValueError: If config section is missing required fields
+        FileNotFoundError: If dataset path does not exist
+    """
+    # Validate config structure
+    if not hasattr(cfg.dataset, 'config'):
+        raise ValueError(
+            "Missing 'config' section in dataset configuration. "
+            "For Flowers17, please add:\n\n"
+            "dataset:\n"
+            "  name: flowers17\n"
+            "  config:\n"
+            "    data_root: /data/kaggle/flowers17\n"
+            "    split_ratios:\n"
+            "      train: 0.7\n"
+            "      val: 0.15\n"
+            "      test: 0.15\n"
+            "    random_state: 42"
+        )
+
+    dataset_cfg = cfg.dataset.config
+
+    # Validate required fields
+    required_fields = ['data_root', 'split_ratios', 'random_state']
+    missing_fields = [field for field in required_fields if not hasattr(dataset_cfg, field)]
+    if missing_fields:
+        raise ValueError(
+            f"Missing required fields in dataset.config: {missing_fields}\n"
+            f"Required fields for Flowers17: {required_fields}"
+        )
+
+    # Extract configuration parameters
+    data_root = dataset_cfg.data_root
+    split_ratios = dataset_cfg.split_ratios
+    random_state = dataset_cfg.random_state
+
+    # Validate data path
     if not os.path.exists(data_root):
-        raise FileNotFoundError(f"Dataset not found at {data_root}")
+        raise FileNotFoundError(
+            f"Flowers17 dataset not found at '{data_root}'. "
+            f"Please check the 'data_root' path in your config file."
+        )
 
     # Load the full dataset for splitting
     full_dataset = datasets.ImageFolder(root=data_root)
 
-    # Split into train/val/test
+    # Split into train/val/test with configured ratios
     train_idx, val_idx, test_idx = _split_dataset(
         full_dataset,
-        train_ratio=0.7,
-        val_ratio=0.15,
-        test_ratio=0.15,
-        random_state=42
+        train_ratio=split_ratios.train,
+        val_ratio=split_ratios.val,
+        test_ratio=split_ratios.test,
+        random_state=random_state
     )
 
     # Create subset datasets with appropriate transforms
@@ -104,20 +152,33 @@ def _create_flowers17_loaders(cfg, train_tf, val_tf):
     return train_set, val_set, test_set
 
 
-def _create_cifar10_loaders(train_tf, val_tf):
+def _create_cifar10_loaders(cfg, train_tf, val_tf):
     """
-    Create DataLoaders for CIFAR10 dataset.
+    Create DataLoaders for CIFAR10 dataset from config.
 
     Args:
+        cfg: Configuration object with optional dataset.config section
         train_tf: Training transforms
         val_tf: Validation/test transforms
 
     Returns:
         tuple: (train_set, val_set, test_set) - Datasets
+
+    Note:
+        CIFAR10 uses the standard train/test split from torchvision.
+        Validation and test sets are identical (official test set).
+        If dataset.config.download_path is not specified, defaults to './data'.
     """
-    train_set = datasets.CIFAR10(root="./data", train=True, transform=train_tf, download=True)
-    val_set = datasets.CIFAR10(root="./data", train=False, transform=val_tf)
-    test_set = val_set
+    # Get download path from config, or use default
+    if hasattr(cfg.dataset, 'config') and hasattr(cfg.dataset.config, 'download_path'):
+        download_path = cfg.dataset.config.download_path
+    else:
+        download_path = "./data"
+
+    train_set = datasets.CIFAR10(root=download_path, train=True, transform=train_tf, download=True)
+    val_set = datasets.CIFAR10(root=download_path, train=False, transform=val_tf)
+    test_set = val_set  # For CIFAR10, val and test are the same (official test set)
+
     return train_set, val_set, test_set
 
 
@@ -127,21 +188,23 @@ def get_data_loaders(cfg):
 
     Args:
         cfg: Configuration object containing dataset parameters including:
-            - dataset.name: Dataset name ('flowers17' or 'cifar10')
+            - dataset.name: Dataset name ('flowers17', 'cifar10', etc.)
             - dataset.batch_size: Batch size for DataLoaders
             - dataset.num_workers: Number of worker processes
             - dataset.transforms: Transform configuration
+            - dataset.config: Dataset-specific configuration (optional for some datasets)
 
     Returns:
         tuple: (train_loader, val_loader, test_loader) - DataLoader objects
 
     Raises:
-        ValueError: If dataset name is not supported
+        ValueError: If dataset name is not supported or config is invalid
         FileNotFoundError: If dataset path does not exist
 
     Example:
         >>> cfg = Config('configs/flowers17_vgg.yaml')
         >>> train_loader, val_loader, test_loader = get_data_loaders(cfg)
+        >>> print(f"Training batches: {len(train_loader)}")
     """
     train_tf, val_tf = get_transforms(cfg.dataset.transforms)
     dataset_name = cfg.dataset.name.lower()
@@ -150,9 +213,12 @@ def get_data_loaders(cfg):
     if dataset_name == "flowers17":
         train_set, val_set, test_set = _create_flowers17_loaders(cfg, train_tf, val_tf)
     elif dataset_name == "cifar10":
-        train_set, val_set, test_set = _create_cifar10_loaders(train_tf, val_tf)
+        train_set, val_set, test_set = _create_cifar10_loaders(cfg, train_tf, val_tf)
     else:
-        raise ValueError(f"Unsupported dataset: {cfg.dataset.name}")
+        raise ValueError(
+            f"Unsupported dataset: '{cfg.dataset.name}'. "
+            f"Supported datasets: 'flowers17', 'cifar10'"
+        )
 
     # Create DataLoaders with common parameters
     loader_kwargs = {

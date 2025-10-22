@@ -123,5 +123,6 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description='Train image classification model')
     ap.add_argument('--config', type=str, required=True, help='Path to config YAML file')
     args = ap.parse_args()
+    #args = argparse.Namespace(config="./configs/flowers17_minivggnet.yaml")
 
     main(args)
