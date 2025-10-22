@@ -1,6 +1,7 @@
 import torch.nn as nn
 from torch import optim
 
+
 def create_criterion(cfg):
     """Create loss criterion from config."""
     loss_type = cfg.loss.type.lower()

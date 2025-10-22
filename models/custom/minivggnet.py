@@ -5,7 +5,7 @@ class MiniVGGNet(nn.Module):
     def __init__(self, num_classes):
         """
         MiniVGGNet with adaptive pooling for flexible input sizes.
-        
+
         Args:
             num_classes: Number of output classes
         """
@@ -38,7 +38,7 @@ class MiniVGGNet(nn.Module):
         # Adaptive pooling to fixed spatial size regardless of input dimensions
         # This outputs 64 channels * 7 * 7 spatial dimensions = 3136 features
         self.adaptive_pool = nn.AdaptiveAvgPool2d((7, 7))
-        
+
         # Calculate flattened dimension: 64 channels * 7 * 7 = 3136
         flattened_dim = 64 * 7 * 7
 

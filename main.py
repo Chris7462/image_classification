@@ -1,15 +1,18 @@
-import torch
 import os
-from data.datasets import get_data_loaders
-from models.model_factory import create_model
-from utils.optimizer_factory import create_criterion, create_optimizer, create_scheduler
-from engine.trainer import train_one_epoch, evaluate
-from utils.config import Config
-from utils.plotting import plot_training_history
+import argparse
+import torch
+
+from data import get_data_loaders
+from models import create_model
+from engine import train_one_epoch, evaluate
+from utils import Config
+from utils import create_criterion, create_optimizer, create_scheduler
+from utils import plot_training_history
 
 
-def main():
-    cfg = Config("configs/flowers17_minivggnet.yaml")
+def main(args):
+    # Load config from command line argument
+    cfg = Config(args.config)
 
     # Device selection: support 'auto' for automatic detection or explicit device
     if cfg.training.device == 'auto':
@@ -77,5 +80,10 @@ def main():
     plot_path = os.path.join(plots_dir, "training_curves.png")
     plot_training_history(history, plot_path)
 
+
 if __name__ == "__main__":
-    main()
+    ap = argparse.ArgumentParser(description='Train image classification model')
+    ap.add_argument('--config', type=str, required=True, help='Path to config YAML file')
+    args = ap.parse_args()
+
+    main(args)

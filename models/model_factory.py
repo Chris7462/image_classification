@@ -2,6 +2,7 @@ import torch.nn as nn
 from torchvision import models
 from models.custom.minivggnet import MiniVGGNet
 
+
 def create_model(cfg):
     backbone = cfg.model.backbone.lower()
     num_classes = cfg.model.num_classes
