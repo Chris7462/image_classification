@@ -1,0 +1,45 @@
+# Dataset config
+dataset:
+  name: cifar10
+  batch_size: 128
+  num_workers: 4
+  config:
+    download_path: ./data
+  transforms:
+    resize: 256
+    crop: 224
+    random_resized_crop: true
+    random_horizontal_flip: true
+    color_jitter:
+      brightness: 0.2
+      contrast: 0.2
+      saturation: 0.2
+      hue: 0.1
+
+# Model config
+model:
+  backbone: resnet50
+  num_classes: 10
+  pretrained: true
+  freeze_backbone: false
+
+# Loss config
+loss:
+  type: cross_entropy
+
+# Optimizer config
+optimizer:
+  type: adam
+  lr: 0.001
+  weight_decay: 0.0001
+
+# Scheduler config
+scheduler:
+  type: cosine
+  t_max: 100
+
+# Training config
+training:
+  epochs: 100
+  device: auto
+  checkpoint_path: cifar10_resnet50_model.pth

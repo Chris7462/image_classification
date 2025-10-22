@@ -1,0 +1,63 @@
+# Dataset config
+dataset:
+  name: flowers17
+  batch_size: 32
+  num_workers: 4
+  config:
+    data_root: /data/kaggle/flowers17
+    split_ratios:
+      train: 0.75
+      val: 0.0 # set this to 0.0 if no validation set is needed
+      test: 0.25
+    random_state: 42
+  transforms:
+    resize: 64
+    crop: 64
+    random_resized_crop: false
+    # Normalization values - optional, defaults to ImageNet if not specified
+    # For training from scratch, consider using dataset-specific values
+    # You can calculate these using script/calculate_dataset_stats.py
+    normalize:
+      mean: [0.442, 0.438, 0.288]
+      std: [0.268, 0.241, 0.251]
+    # random_affine:
+    #   degrees: 30
+    #   translate: [0.1, 0.1]
+    #   shear: 0.2
+    #   scale: [0.8, 1.2]
+    random_horizontal_flip: false
+    # color_jitter:
+    #   brightness: 0.2
+    #   contrast: 0.2
+    #   saturation: 0.2
+    #   hue: 0.1
+    # random_grayscale:
+    #   p: 0.1  # 10% chance to convert to grayscale
+
+# Model config
+model:
+  backbone: minivggnet
+  num_classes: 17
+
+# Loss config
+loss:
+  type: cross_entropy
+
+# Optimizer config
+optimizer:
+  type: SGD
+  lr: 0.05
+  weight_decay: 0.0
+  momentum: 0.0
+
+# Scheduler config
+scheduler:
+  type: none
+  # step_size: 5
+  # gamma: 0.1
+
+# Training config
+training:
+  epochs: 150
+  device: auto  # 'auto' for automatic detection, or specify 'cuda', 'mps', 'cpu'
+  checkpoint_path: flowers17_minivggnet_no_aug.pth
