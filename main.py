@@ -1,3 +1,41 @@
+"""
+Image Classification Training Script
+
+Main entry point for training image classification models. Orchestrates the entire
+training pipeline including data loading, model creation, training loop, evaluation,
+and visualization.
+
+Workflow:
+    1. Load configuration from YAML file
+    2. Setup device (auto-detect or specify CUDA/MPS/CPU)
+    3. Create output directories for checkpoints and plots
+    4. Initialize data loaders with train/val/test splits
+    5. Create model, loss function, optimizer, and scheduler
+    6. Training loop with validation after each epoch
+    7. Save best model based on validation accuracy
+    8. Final evaluation on test set
+    9. Generate training curves visualization
+
+Usage:
+    python main.py --config configs/flowers17_vgg.yaml
+    python main.py --config configs/flowers17_minivggnet.yaml
+
+Command-line Arguments:
+    --config: Path to YAML configuration file (required)
+
+Outputs:
+    - outputs/checkpoints/<model_name>.pth: Best model weights
+    - outputs/plots/training_curves.png: Training/validation curves
+
+Example:
+    $ python main.py --config configs/flowers17_vgg.yaml
+    Using cuda device
+    [INFO] training network...
+    Epoch 1/10 - loss: 0.5234 - acc: 78.50% - val_loss: 0.4123 - val_acc: 82.30%
+    ✅ Saved best model
+    ...
+"""
+
 import os
 import argparse
 import torch

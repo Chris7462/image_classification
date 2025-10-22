@@ -1,4 +1,32 @@
+"""
+Image Transformation Module
+
+Defines transformation pipelines for training and validation/test datasets.
+Training transforms include data augmentation techniques, while validation/test
+transforms apply only deterministic preprocessing.
+
+Supported Augmentations:
+    - Random resized crop or resize + random crop
+    - Random affine transformations (rotation, translation, shear, scale)
+    - Random horizontal flip
+    - Color jitter (brightness, contrast, saturation, hue)
+    - Random grayscale conversion
+
+All transforms include ImageNet normalization (mean=[0.485, 0.456, 0.406],
+std=[0.229, 0.224, 0.225]) for transfer learning compatibility.
+
+Functions:
+    get_transforms: Build train and validation transform pipelines from config
+
+Example:
+    >>> from utils import Config
+    >>> from data import get_transforms
+    >>> cfg = Config('configs/flowers17_vgg.yaml')
+    >>> train_tf, val_tf = get_transforms(cfg.dataset.transforms)
+"""
+
 from torchvision import transforms
+
 
 def get_transforms(transform_cfg):
     mean = [0.485, 0.456, 0.406]

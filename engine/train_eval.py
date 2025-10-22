@@ -1,3 +1,26 @@
+"""
+Training and Evaluation Engine
+
+Core training and evaluation loops for image classification models. Provides
+efficient implementations for single-epoch training and model evaluation with
+loss and accuracy metrics.
+
+Functions:
+    train_one_epoch: Execute one training epoch with backpropagation
+    evaluate: Evaluate model on validation or test set without gradient computation
+
+Key Features:
+    - Automatic device placement (CPU/CUDA/MPS)
+    - Batch-wise loss accumulation for accurate epoch metrics
+    - Memory-efficient evaluation with torch.no_grad()
+    - Top-1 accuracy computation
+
+Example:
+    >>> from engine import train_one_epoch, evaluate
+    >>> train_loss, train_acc = train_one_epoch(model, train_loader, optimizer, criterion, device)
+    >>> val_loss, val_acc = evaluate(model, val_loader, criterion, device)
+"""
+
 import torch
 
 

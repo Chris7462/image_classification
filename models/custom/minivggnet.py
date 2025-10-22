@@ -1,3 +1,31 @@
+"""
+MiniVGGNet Architecture
+
+Lightweight CNN architecture inspired by VGG, designed for efficient training
+on small image datasets. Features two convolutional blocks with batch normalization
+and dropout for regularization, followed by fully connected layers.
+
+Architecture:
+    Block 1: [Conv3x3(32) -> BN -> ReLU -> Conv3x3(32) -> BN -> ReLU -> MaxPool -> Dropout(0.25)]
+    Block 2: [Conv3x3(64) -> BN -> ReLU -> Conv3x3(64) -> BN -> ReLU -> MaxPool -> Dropout(0.25)]
+    AdaptiveAvgPool2d(7x7)
+    FC: [Flatten -> Linear(3136->512) -> ReLU -> BN -> Dropout(0.5) -> Linear(512->num_classes)]
+
+Key Features:
+    - Adaptive pooling for flexible input image sizes
+    - Batch normalization for training stability
+    - Dropout regularization to prevent overfitting
+    - Compact design (~1M parameters for 17 classes)
+
+Classes:
+    MiniVGGNet: PyTorch nn.Module implementation
+
+Example:
+    >>> from models.custom.minivggnet import MiniVGGNet
+    >>> model = MiniVGGNet(num_classes=17)
+    >>> output = model(torch.randn(1, 3, 64, 64))  # Flexible input size
+"""
+
 import torch.nn as nn
 
 

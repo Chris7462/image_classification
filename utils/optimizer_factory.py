@@ -1,3 +1,29 @@
+"""
+Optimizer and Loss Factory Module
+
+Factory functions for creating loss functions, optimizers, and learning rate
+schedulers from configuration files. Supports common optimization algorithms
+and scheduling strategies for deep learning.
+
+Supported Components:
+    Loss Functions: CrossEntropy, MSE, BCE, BCEWithLogits
+    Optimizers: Adam, SGD, AdamW, RMSprop
+    Schedulers: StepLR, CosineAnnealing, ReduceLROnPlateau
+
+Functions:
+    create_criterion: Create loss function from config
+    create_optimizer: Create optimizer with hyperparameters from config
+    create_scheduler: Create learning rate scheduler from config
+
+Example:
+    >>> from utils import Config, create_criterion, create_optimizer, create_scheduler
+    >>> cfg = Config('configs/flowers17_vgg.yaml')
+    >>> criterion = create_criterion(cfg)
+    >>> optimizer = create_optimizer(model.parameters(), cfg)
+    >>> scheduler = create_scheduler(optimizer, cfg)
+"""
+
+
 import torch.nn as nn
 from torch import optim
 

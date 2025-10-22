@@ -1,3 +1,30 @@
+"""
+Model Factory Module
+
+Factory pattern implementation for creating image classification models from
+configuration files. Supports custom architectures and pretrained models with
+optional backbone freezing for transfer learning.
+
+Supported Models:
+    - minivggnet: Custom lightweight CNN for small images
+    - vgg16: VGG16 with ImageNet pretrained weights
+    - resnet50: ResNet50 with ImageNet pretrained weights
+
+Transfer Learning Features:
+    - Load pretrained weights from torchvision
+    - Freeze backbone layers while training only the classifier
+    - Automatic classifier head replacement for custom number of classes
+
+Functions:
+    create_model: Instantiate model from config with proper initialization
+
+Example:
+    >>> from utils import Config
+    >>> from models import create_model
+    >>> cfg = Config('configs/flowers17_vgg.yaml')
+    >>> model = create_model(cfg)
+"""
+
 import torch.nn as nn
 from torchvision import models
 from models.custom.minivggnet import MiniVGGNet

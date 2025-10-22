@@ -1,3 +1,28 @@
+"""
+Configuration Parser Module
+
+Simple YAML configuration file parser that converts nested dictionaries into
+objects with dot notation attribute access. Provides clean and readable access
+to configuration parameters throughout the codebase.
+
+Classes:
+    _ConfigNode: Internal class for nested config sections with attribute access
+    Config: Main configuration class that loads YAML and provides dot notation
+
+Features:
+    - Nested configuration support (e.g., cfg.dataset.batch_size)
+    - Clean dot notation instead of dictionary keys
+    - Automatic conversion of nested dicts to ConfigNode objects
+
+Example:
+    >>> from utils import Config
+    >>> cfg = Config('configs/flowers17_vgg.yaml')
+    >>> print(cfg.dataset.batch_size)  # Access with dot notation
+    32
+    >>> print(cfg.model.backbone)
+    'vgg16'
+"""
+
 class _ConfigNode:
     def __init__(self, d):
         for k, v in d.items():
