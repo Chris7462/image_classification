@@ -90,47 +90,13 @@ def _create_flowers17_loaders(cfg, train_tf, val_tf):
         tuple: (train_set, val_set, test_set) - Dataset subsets
 
     Raises:
-        ValueError: If config section is missing required fields
         FileNotFoundError: If dataset path does not exist
     """
-    # Validate config structure
-    if not hasattr(cfg.dataset, 'config'):
-        raise ValueError(
-            "Missing 'config' section in dataset configuration. "
-            "For Flowers17, please add:\n\n"
-            "dataset:\n"
-            "  name: flowers17\n"
-            "  config:\n"
-            "    data_root: /data/kaggle/flowers17\n"
-            "    split_ratios:\n"
-            "      train: 0.7\n"
-            "      val: 0.15\n"
-            "      test: 0.15\n"
-            "    random_state: 42"
-        )
-
     dataset_cfg = cfg.dataset.config
-
-    # Validate required fields
-    required_fields = ['data_root', 'split_ratios', 'random_state']
-    missing_fields = [field for field in required_fields if not hasattr(dataset_cfg, field)]
-    if missing_fields:
-        raise ValueError(
-            f"Missing required fields in dataset.config: {missing_fields}\n"
-            f"Required fields for Flowers17: {required_fields}"
-        )
-
-    # Extract configuration parameters
     data_root = dataset_cfg.data_root
-    split_ratios = dataset_cfg.split_ratios
-    random_state = dataset_cfg.random_state
 
-    # Validate data path
     if not os.path.exists(data_root):
-        raise FileNotFoundError(
-            f"Flowers17 dataset not found at '{data_root}'. "
-            f"Please check the 'data_root' path in your config file."
-        )
+        raise FileNotFoundError(f"Dataset not found at: {data_root}")
 
     # Load the full dataset for splitting
     full_dataset = datasets.ImageFolder(root=data_root)
@@ -138,10 +104,10 @@ def _create_flowers17_loaders(cfg, train_tf, val_tf):
     # Split into train/val/test with configured ratios
     train_idx, val_idx, test_idx = _split_dataset(
         full_dataset,
-        train_ratio=split_ratios.train,
-        val_ratio=split_ratios.val,
-        test_ratio=split_ratios.test,
-        random_state=random_state
+        train_ratio=dataset_cfg.split_ratios.train,
+        val_ratio=dataset_cfg.split_ratios.val,
+        test_ratio=dataset_cfg.split_ratios.test,
+        random_state=dataset_cfg.random_state
     )
 
     # Create subset datasets with appropriate transforms
@@ -198,7 +164,7 @@ def get_data_loaders(cfg):
         tuple: (train_loader, val_loader, test_loader) - DataLoader objects
 
     Raises:
-        ValueError: If dataset name is not supported or config is invalid
+        ValueError: If dataset name is not supported
         FileNotFoundError: If dataset path does not exist
 
     Example:

@@ -14,6 +14,12 @@ dataset:
     resize: 64
     crop: 64
     random_resized_crop: false
+    # Normalization values - optional, defaults to ImageNet if not specified
+    # For training from scratch, consider using dataset-specific values
+    # You can calculate these using script/calculate_dataset_stats.py
+    normalize:
+      mean: [0.442, 0.438, 0.288]
+      std: [0.268, 0.241, 0.251]
     random_affine:
       degrees: 30
       translate: [0.1, 0.1]

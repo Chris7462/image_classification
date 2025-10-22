@@ -29,8 +29,62 @@ from torchvision import transforms
 
 
 def get_transforms(transform_cfg):
-    mean = [0.485, 0.456, 0.406]
-    std = [0.229, 0.224, 0.225]
+    """
+    Build training and validation transform pipelines from configuration.
+
+    Creates two separate transform pipelines:
+    - Training: Includes data augmentation for regularization
+    - Validation/Test: Deterministic preprocessing only
+
+    Args:
+        transform_cfg: Configuration object containing transform parameters:
+            - resize (int): Target size for resizing
+            - crop (int): Size for cropping
+            - normalize (dict, optional): Normalization parameters
+                (defaults to ImageNet values)
+                - mean (list): RGB mean values
+                - std (list): RGB standard deviation values
+            - random_resized_crop (bool, optional): Use RandomResizedCrop
+                instead of Resize+RandomCrop
+            - random_affine (dict, optional): Affine transformation parameters
+                - degrees (float): Rotation range
+                - translate (list): Translation range [x, y]
+                - shear (float): Shear range
+                - scale (list): Scaling range [min, max]
+            - random_horizontal_flip (bool, optional): Enable horizontal flipping
+            - color_jitter (dict, optional): Color jitter parameters
+                - brightness (float): Brightness adjustment range
+                - contrast (float): Contrast adjustment range
+                - saturation (float): Saturation adjustment range
+                - hue (float): Hue adjustment range
+            - random_grayscale (dict, optional): Grayscale conversion parameters
+                - p (float): Probability of conversion
+
+    Returns:
+        tuple: (train_transforms, val_transforms) - Composed transform pipelines
+
+    Example:
+        >>> from types import SimpleNamespace
+        >>> cfg = SimpleNamespace(
+        ...     resize=256, crop=224, random_resized_crop=True,
+        ...     random_horizontal_flip=True,
+        ...     normalize=SimpleNamespace(
+        ...         mean=[0.485, 0.456, 0.406],
+        ...         std=[0.229, 0.224, 0.225]
+        ...     )
+        ... )
+        >>> train_tf, val_tf = get_transforms(cfg)
+        >>> # Apply to image
+        >>> train_img = train_tf(image)
+    """
+    # Get normalization parameters (default to ImageNet values)
+    if hasattr(transform_cfg, 'normalize'):
+        mean = transform_cfg.normalize.mean
+        std = transform_cfg.normalize.std
+    else:
+        # Default to ImageNet values for backward compatibility
+        mean = [0.485, 0.456, 0.406]
+        std = [0.229, 0.224, 0.225]
 
     # Training transforms with augmentation
     train_tf = []
