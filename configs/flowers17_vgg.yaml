@@ -1,3 +1,4 @@
+# Dataset config
 dataset:
   name: flowers17
   batch_size: 32

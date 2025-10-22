@@ -1,3 +1,4 @@
+# Dataset config
 dataset:
   name: cifar10
   batch_size: 128
