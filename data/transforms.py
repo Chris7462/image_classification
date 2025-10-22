@@ -28,7 +28,7 @@ Example:
 from torchvision import transforms
 
 
-def get_transforms(transform_cfg):
+def _get_transforms(transform_cfg):
     """
     Build training and validation transform pipelines from configuration.
 

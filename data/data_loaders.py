@@ -27,7 +27,7 @@ import os
 from torch.utils.data import DataLoader, Subset
 from torchvision import datasets
 from sklearn.model_selection import train_test_split
-from .transforms import get_transforms
+from .transforms import _get_transforms
 
 
 def _split_dataset(dataset, train_ratio=0.7, val_ratio=0.15, test_ratio=0.15, random_state=42):
@@ -172,7 +172,7 @@ def get_data_loaders(cfg):
         >>> train_loader, val_loader, test_loader = get_data_loaders(cfg)
         >>> print(f"Training batches: {len(train_loader)}")
     """
-    train_tf, val_tf = get_transforms(cfg.dataset.transforms)
+    train_tf, val_tf = _get_transforms(cfg.dataset.transforms)
     dataset_name = cfg.dataset.name.lower()
 
     # Create datasets based on name
