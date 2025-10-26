@@ -54,13 +54,15 @@ def create_criterion(cfg):
         raise ValueError(f'Unsupported loss type: {loss_type}')
 
 
-def create_optimizer(model_parameters, cfg):
+def create_optimizer(model_parameters, cfg, weight_decay=None):
     """
     Create optimizer from configuration.
 
     Args:
         model_parameters: Model parameters to optimize
         cfg: Configuration object with optimizer settings
+        weight_decay: Optional weight_decay override (if None, uses config
+            value)
 
     Returns:
         torch.optim.Optimizer: Configured optimizer
@@ -70,7 +72,10 @@ def create_optimizer(model_parameters, cfg):
     """
     opt_type = cfg.optimizer.type.lower()
     lr = cfg.optimizer.lr
-    weight_decay = cfg.optimizer.weight_decay
+
+    # Use provided weight_decay or fall back to config
+    if weight_decay is None:
+        weight_decay = cfg.optimizer.weight_decay
 
     if opt_type == 'adam':  # pylint: disable=no-else-return
         return optim.Adam(model_parameters, lr=lr,

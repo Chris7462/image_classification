@@ -28,8 +28,10 @@ from engine import evaluate, train_one_epoch
 from models import create_model
 
 from sklearn.metrics import classification_report
+from sklearn.model_selection import KFold
 
 import torch
+from torch.utils.data import Subset
 
 from utils import (Config, create_criterion, create_optimizer,
                    create_scheduler, plot_training_history, set_seed)
@@ -103,6 +105,109 @@ class Trainer:
 
         return checkpoint_path, plot_path
 
+    def tune_weight_decay(self):
+        """
+        Run k-fold cross-validation to find best weight_decay if configured.
+
+        If optimizer config has cross_validation section, performs grid search
+        and reinitializes model/optimizer with best weight_decay.
+        Otherwise, uses weight_decay from config.
+        """
+        # Check if cross-validation is configured
+        if not hasattr(self.cfg.optimizer, 'cross_validation'):
+            print('[INFO] No cross-validation found in config file'
+                  f'use weight_decay = {self.cfg.optimizer.weight_decay} from config')
+            return
+
+        print('[INFO] Starting cross-validation for weight_decay tuning...')
+        # Run grid search with k-fold CV
+        best_wd = self._run_cv_grid_search()
+
+        print(f'[INFO] Best weight_decay from CV: {best_wd}')
+        print('[INFO] Reinitializing model and optimizer with best '
+              'weight_decay...')
+
+        # Reinitialize model and optimizer with best weight_decay
+        self.model = create_model(self.cfg).to(self.device)
+        self.optimizer = create_optimizer(
+            filter(lambda p: p.requires_grad, self.model.parameters()),
+            self.cfg,
+            weight_decay=best_wd
+        )
+        # Recreate scheduler with new optimizer
+        self.scheduler = create_scheduler(self.optimizer, self.cfg)
+
+    def _run_cv_grid_search(self):
+        """
+        Internal method for cross-validation grid search.
+
+        Returns:
+            float: Best weight_decay value
+        """
+        weight_decay_grid = self.cfg.optimizer.cross_validation.weight_decay
+        cv_folds = self.cfg.optimizer.cross_validation.folds
+        cv_epochs = self.cfg.training.epochs
+
+        train_dataset = self.train_loader.dataset
+        kf = KFold(n_splits=cv_folds, shuffle=True, random_state=42)
+
+        best_weight_decay = None
+        best_mean_acc = 0.0
+
+        print(f'Grid: {weight_decay_grid}')
+        print(f'Folds: {cv_folds}, Epochs per fold: {cv_epochs}\n')
+
+        # Grid search
+        for wd in weight_decay_grid:
+            fold_accuracies = []
+
+            # K-fold cross-validation
+            for fold, (train_idx, val_idx) in enumerate(
+                    kf.split(range(len(train_dataset)))):
+                # Create fold datasets
+                fold_train = Subset(train_dataset, train_idx)
+                fold_val = Subset(train_dataset, val_idx)
+
+                fold_train_loader = torch.utils.data.DataLoader(
+                    fold_train, batch_size=self.cfg.dataset.batch_size,
+                    shuffle=True, num_workers=self.cfg.dataset.num_workers,
+                    pin_memory=True
+                )
+                fold_val_loader = torch.utils.data.DataLoader(
+                    fold_val, batch_size=self.cfg.dataset.batch_size,
+                    shuffle=False, num_workers=self.cfg.dataset.num_workers,
+                    pin_memory=True
+                )
+
+                # Create fresh model and optimizer for this fold
+                fold_model = create_model(self.cfg).to(self.device)
+                fold_optimizer = create_optimizer(
+                    filter(lambda p: p.requires_grad, fold_model.parameters()),
+                    self.cfg,
+                    weight_decay=wd
+                )
+
+                # Train on this fold (silent - no epoch printing)
+                for epoch in range(cv_epochs):
+                    train_one_epoch(fold_model, fold_train_loader,
+                                   fold_optimizer, self.criterion, self.device)
+
+                # Evaluate on validation fold
+                _, val_acc, _, _ = evaluate(fold_model, fold_val_loader,
+                                           self.criterion, self.device)
+                fold_accuracies.append(val_acc)
+
+            # Compute mean accuracy across folds
+            mean_acc = sum(fold_accuracies) / len(fold_accuracies)
+            print(f'weight_decay={wd:.4f} => mean val acc: {mean_acc:.2f}%')
+
+            if mean_acc > best_mean_acc:
+                best_mean_acc = mean_acc
+                best_weight_decay = wd
+
+        print(f'Best mean validation accuracy: {best_mean_acc:.2f}%\n')
+        return best_weight_decay
+
     def train(self):
         """Execute the training loop."""
         print('[INFO] training network...')
@@ -175,6 +280,7 @@ def main(parsed_args):
     # pylint: enable=no-member
 
     trainer = Trainer(cfg)
+    trainer.tune_weight_decay()
     trainer.train()
     trainer.evaluate()
 
