@@ -8,6 +8,7 @@ optional backbone freezing for transfer learning.
 Supported Models:
     - minivggnet: Custom lightweight CNN for small images
     - vgg16: VGG16 with ImageNet pretrained weights
+    - vgg16_logistic: VGG16 features + logistic regression
     - resnet50: ResNet50 with ImageNet pretrained weights
 
 Transfer Learning Features:
@@ -26,6 +27,7 @@ Example:
 """
 
 from models.custom.minivggnet import MiniVGGNet
+from models.custom.vgg16_logistic import VGG16LogisticRegression
 
 from torch import nn
 
@@ -65,6 +67,10 @@ def create_model(cfg):
     if backbone == 'minivggnet':
         # Custom MiniVGGNet doesn't use pretrained weights
         model = MiniVGGNet(num_classes=num_classes)
+
+    elif backbone == 'vgg16_logistic':
+        # VGG16 with frozen features and logistic regression classifier
+        model = VGG16LogisticRegression(num_classes=num_classes)
 
     elif backbone == 'vgg16':
         pretrained = cfg.model.pretrained

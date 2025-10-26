@@ -30,7 +30,7 @@ Example:
     >>> output = model(torch.randn(1, 3, 64, 64))  # Flexible input size
 """
 
-import torch.nn as nn
+from torch import nn
 
 
 class MiniVGGNet(nn.Module):
@@ -43,7 +43,7 @@ class MiniVGGNet(nn.Module):
         Args:
             num_classes: Number of output classes
         """
-        super(MiniVGGNet, self).__init__()
+        super().__init__()
 
         # Block 1: CONV => RELU => CONV => RELU => POOL, with BN, Dropout
         self.block1 = nn.Sequential(

@@ -1,0 +1,46 @@
+# Dataset config
+dataset:
+  name: animals
+  batch_size: 32
+  num_workers: 4
+  config:
+    data_root: /data/kaggle/animals
+    split_ratios:
+      train: 0.75
+      val: 0.0
+      test: 0.25
+    random_state: 42
+  transforms:
+    resize: 224
+    crop: 224
+    random_resized_crop: false
+    normalize:
+      mean: [0.461, 0.437, 0.392]
+      std: [0.272, 0.263, 0.263]
+    random_horizontal_flip: false
+
+# Model config
+model:
+  backbone: vgg16_logistic
+  num_classes: 3
+
+# Loss config
+loss:
+  type: cross_entropy
+
+# Optimizer config
+optimizer:
+  type: SGD
+  lr: 0.01
+  weight_decay: 0.1
+  momentum: 0.0
+
+# Scheduler config
+scheduler:
+  type: none
+
+# Training config
+training:
+  epochs: 50
+  device: auto
+  checkpoint_path: animals_vgg16_logistic.pth

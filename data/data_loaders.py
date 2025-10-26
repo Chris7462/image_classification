@@ -14,7 +14,7 @@ Key Features:
 Functions:
     _split_dataset: Split dataset indices into train/val/test with
         stratification
-    _create_flowers17_loaders: Create Flowers17 dataset loaders
+    _create_imagefolder_loaders: Create ImageFolder dataset loaders
     _create_cifar10_loaders: Create CIFAR10 dataset loaders
     get_data_loaders: Create train/val/test DataLoaders from config
 
@@ -89,9 +89,12 @@ def _split_dataset(dataset, train_ratio=0.7, val_ratio=0.15, test_ratio=0.15,
     return train_idx, val_idx, test_idx
 
 
-def _create_flowers17_loaders(cfg, train_tf, val_tf):
+def _create_imagefolder_loaders(cfg, train_tf, val_tf):
     """
-    Create DataLoaders for Flowers17 dataset from config.
+    Create DataLoaders for ImageFolder-based datasets from config.
+
+    Works for any dataset organized in ImageFolder format (e.g., Flowers17,
+    Animals).
 
     Args:
         cfg: Configuration object with dataset.config section
@@ -172,7 +175,7 @@ def get_data_loaders(cfg):
 
     Args:
         cfg: Configuration object containing dataset parameters including:
-            - dataset.name: Dataset name ('flowers17', 'cifar10', etc.)
+            - dataset.name: Dataset name ('flowers17', 'animals', 'cifar10')
             - dataset.batch_size: Batch size for DataLoaders
             - dataset.num_workers: Number of worker processes
             - dataset.transforms: Transform configuration
@@ -195,16 +198,16 @@ def get_data_loaders(cfg):
     dataset_name = cfg.dataset.name.lower()
 
     # Create datasets based on name
-    if dataset_name == 'flowers17':
+    if dataset_name in ['flowers17', 'animals']:
         train_set, val_set, test_set = \
-            _create_flowers17_loaders(cfg, train_tf, val_tf)
+            _create_imagefolder_loaders(cfg, train_tf, val_tf)
     elif dataset_name == 'cifar10':
         train_set, val_set, test_set = \
             _create_cifar10_loaders(cfg, train_tf, val_tf)
     else:
         raise ValueError(
             f"Unsupported dataset: '{cfg.dataset.name}'. "
-            f"Supported datasets: 'flowers17', 'cifar10'"
+            f"Supported datasets: 'flowers17', 'animals', 'cifar10'"
         )
 
     # Create DataLoaders with common parameters
