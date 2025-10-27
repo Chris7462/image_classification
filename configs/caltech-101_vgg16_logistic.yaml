@@ -4,7 +4,7 @@ dataset:
   batch_size: 32
   num_workers: 4
   config:
-    data_root: /data/kaggle/animals
+    data_root: /data/kaggle/caltech-101
     split_ratios:
       train: 0.75
       val: 0.0
@@ -24,7 +24,7 @@ dataset:
 # Model config
 model:
   backbone: vgg16_logistic
-  num_classes: 3
+  num_classes: 102
 
 # Loss config
 loss:
@@ -34,7 +34,7 @@ loss:
 optimizer:
   type: SGD
   lr: 0.01
-  weight_decay: 0.1 # 0.1 worked best in experiments
+  weight_decay: 0.0001  # 0.0001 worked best in experiments
   momentum: 0.0
   # Cross-validation for weight_decay tuning (optional)
   # Set this up will overwrite the weight_decay
@@ -50,4 +50,4 @@ scheduler:
 training:
   epochs: 50
   device: auto
-  checkpoint_path: animals_vgg16_logistic.pth
+  checkpoint_path: caltech-101_vgg16_logistic.pth

@@ -14,12 +14,11 @@ dataset:
     resize: 256
     crop: 224
     random_resized_crop: true
-    # Normalization values - optional, defaults to ImageNet if not specified
-    # For training from scratch, consider using dataset-specific values
-    # You can calculate these using utils/calculate_dataset_stats.py
-    normalize:
-      mean: [0.485, 0.456, 0.406]  # ImageNet default (or use Flowers17-specific values)
-      std: [0.229, 0.224, 0.225]
+    # Commented out to use default normalization values for the pretrained model
+    # If you traing the model from scratch, consider uncommenting and adjusting these values
+    # normalize:
+    #   mean: [0.461, 0.437, 0.392]
+    #   std: [0.272, 0.263, 0.263]
     random_affine:
       degrees: 30
       translate: [0.1, 0.1]
@@ -61,4 +60,4 @@ scheduler:
 training:
   epochs: 10
   device: auto  # 'auto' for automatic detection, or specify 'cuda', 'mps', 'cpu'
-  checkpoint_path: flowers17_vgg16_model.pth
+  checkpoint_path: flowers17_vgg16_linear.pth

@@ -198,7 +198,7 @@ def get_data_loaders(cfg):
     dataset_name = cfg.dataset.name.lower()
 
     # Create datasets based on name
-    if dataset_name in ['flowers17', 'animals']:
+    if dataset_name in ['animals', 'caltech-101', 'flowers17']:
         train_set, val_set, test_set = \
             _create_imagefolder_loaders(cfg, train_tf, val_tf)
     elif dataset_name == 'cifar10':
@@ -207,7 +207,7 @@ def get_data_loaders(cfg):
     else:
         raise ValueError(
             f"Unsupported dataset: '{cfg.dataset.name}'. "
-            f"Supported datasets: 'flowers17', 'animals', 'cifar10'"
+            f"Supported datasets: 'animals', 'caltech-101', 'flowers17', 'cifar10'"
         )
 
     # Create DataLoaders with common parameters

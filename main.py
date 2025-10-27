@@ -117,7 +117,7 @@ class Trainer:
         if not hasattr(self.cfg.optimizer, 'cross_validation'):
             print('[INFO] No cross-validation found in config file. '
                   f'Using weight_decay = {self.cfg.optimizer.weight_decay} '
-                  ' from config')
+                  'from config')
             return
 
         print('[INFO] Starting cross-validation for weight_decay tuning...')
@@ -327,6 +327,7 @@ if __name__ == '__main__':
     ap.add_argument('--config', type=str, required=True,
                     help='Path to config YAML file')
     args = ap.parse_args()
-    # args = argparse.Namespace(config='./configs/flowers17_minivggnet.yaml')
+    #args = argparse.Namespace(config='./configs/flowers17_minivggnet.yaml')
+    #args = argparse.Namespace(config='./configs/caltech-101_vgg16_logistic.yaml')
 
     main(args)

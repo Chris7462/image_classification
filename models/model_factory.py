@@ -75,7 +75,7 @@ def create_model(cfg):
     elif backbone == 'vgg16':
         pretrained = cfg.model.pretrained
         freeze_backbone = cfg.model.freeze_backbone
-        model = models.vgg16(weights=models.VGG16_Weights.IMAGENET1K_V1
+        model = models.vgg16(weights=models.VGG16_Weights.DEFAULT
                              if pretrained else None)
         if freeze_backbone:
             for p in model.features.parameters():
@@ -85,7 +85,7 @@ def create_model(cfg):
     elif backbone == 'resnet50':
         pretrained = cfg.model.pretrained
         freeze_backbone = cfg.model.freeze_backbone
-        model = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V1
+        model = models.resnet50(weights=models.ResNet50_Weights.DEFAULT
                                 if pretrained else None)
         if freeze_backbone:
             for p in list(model.children())[:-1]:
