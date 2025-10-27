@@ -32,8 +32,13 @@ loss:
 optimizer:
   type: SGD
   lr: 0.01
-  weight_decay: 0.1
+  weight_decay: 0.1 # 0.1 worked best in experiments
   momentum: 0.0
+  # Cross-validation for weight_decay tuning (optional)
+  # Set this up will overwrite the weight_decay
+  # cross_validation:
+  #   weight_decay: [10.0, 1.0, 0.1, 0.01, 0.001, 0.0001]
+  #   folds: 5
 
 # Scheduler config
 scheduler:
