@@ -127,12 +127,14 @@ class Trainer:
         print('[INFO] Reinitializing model and optimizer with best '
               'weight_decay...')
 
-        # Reinitialize model and optimizer with best weight_decay
+        # Update config with best weight_decay
+        self.cfg.optimizer.weight_decay = best_wd
+
+        # Reinitialize model and optimizer
         self.model = create_model(self.cfg).to(self.device)
         self.optimizer = create_optimizer(
             filter(lambda p: p.requires_grad, self.model.parameters()),
-            self.cfg,
-            weight_decay=best_wd
+            self.cfg
         )
         # Recreate scheduler with new optimizer
         self.scheduler = create_scheduler(self.optimizer, self.cfg)
@@ -181,10 +183,12 @@ class Trainer:
 
                 # Create fresh model and optimizer for this fold
                 fold_model = create_model(self.cfg).to(self.device)
+
+                # Set weight_decay for this fold
+                self.cfg.optimizer.weight_decay = wd
                 fold_optimizer = create_optimizer(
                     filter(lambda p: p.requires_grad, fold_model.parameters()),
-                    self.cfg,
-                    weight_decay=wd
+                    self.cfg
                 )
 
                 # Train on this fold (silent - no epoch printing)
