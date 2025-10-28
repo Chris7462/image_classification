@@ -206,8 +206,7 @@ def get_data_loaders(cfg):
             _create_cifar10_loaders(cfg, train_tf, val_tf)
     else:
         raise ValueError(
-            f"Unsupported dataset: '{cfg.dataset.name}'. "
-            f"Supported datasets: 'animals', 'caltech-101', 'flowers17', 'cifar10'"
+            f"Unsupported dataset: '{cfg.dataset.name}'."
         )
 
     # Create DataLoaders with common parameters

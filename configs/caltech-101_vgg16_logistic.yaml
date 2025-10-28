@@ -36,8 +36,8 @@ optimizer:
   lr: 0.01
   weight_decay: 0.0001  # 0.0001 worked best in experiments
   momentum: 0.0
-  # Cross-validation for weight_decay tuning (optional)
-  # Set this up will overwrite the weight_decay
+  # Cross-validation is only used in optimize_hyperparameters.py
+  # main.py ignores this section
   # cross_validation:
   #   weight_decay: [10.0, 1.0, 0.1, 0.01, 0.001, 0.0001]
   #   folds: 5
