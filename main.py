@@ -53,8 +53,9 @@ class Trainer:
         self.train_loader, self.val_loader, self.test_loader = \
             get_data_loaders(cfg)
 
-        # Store class names for classification report
+        # Store class names and num_classes
         self.class_names = self.train_loader.dataset.dataset.classes
+        self.num_classes = len(self.class_names)
 
         # Model components
         self.model = create_model(cfg).to(self.device)
@@ -66,10 +67,10 @@ class Trainer:
 
         # Training state
         self.history = {
-            'loss': [], 'accuracy': [],
-            'val_loss': [], 'val_accuracy': []
+            'loss': [], 'top1_accuracy': [], 'top5_accuracy': [],
+            'val_loss': [], 'val_top1_accuracy': [], 'val_top5_accuracy': []
         }
-        self.best_val_acc = 0.0
+        self.best_val_top1 = 0.0
 
     def _setup_device(self):
         """Set up and return training device."""
@@ -109,32 +110,40 @@ class Trainer:
 
         for epoch in range(self.cfg.training.epochs):
             # Train and validate
-            train_loss, train_acc = train_one_epoch(
+            train_loss, train_top1, train_top5 = train_one_epoch(
                 self.model, self.train_loader, self.optimizer,
-                self.criterion, self.device
+                self.criterion, self.device, self.num_classes
             )
-            val_loss, val_acc, _, _ = evaluate(
-                self.model, self.val_loader, self.criterion, self.device
+            val_loss, val_top1, val_top5, _, _ = evaluate(
+                self.model, self.val_loader, self.criterion,
+                self.device, self.num_classes
             )
 
             # Update history
             self.history['loss'].append(train_loss)
-            self.history['accuracy'].append(train_acc)
+            self.history['top1_accuracy'].append(train_top1)
+            self.history['top5_accuracy'].append(train_top5)
             self.history['val_loss'].append(val_loss)
-            self.history['val_accuracy'].append(val_acc)
+            self.history['val_top1_accuracy'].append(val_top1)
+            self.history['val_top5_accuracy'].append(val_top5)
 
             # Step scheduler
             if self.scheduler:
                 self.scheduler.step()
 
             # Log progress
-            print(f'Epoch {epoch + 1}/{self.cfg.training.epochs} - '
-                  f'loss: {train_loss:.4f} - acc: {train_acc:.2f}% - '
-                  f'val_loss: {val_loss:.4f} - val_acc: {val_acc:.2f}%')
+            log_msg = (f'Epoch {epoch + 1}/{self.cfg.training.epochs} - '
+                      f'loss: {train_loss:.4f} - top1: {train_top1:.2f}%')
+            if train_top5 is not None:
+                log_msg += f' - top5: {train_top5:.2f}%'
+            log_msg += f' - val_loss: {val_loss:.4f} - val_top1: {val_top1:.2f}%'
+            if val_top5 is not None:
+                log_msg += f' - val_top5: {val_top5:.2f}%'
+            print(log_msg)
 
-            # Save best model
-            if val_acc > self.best_val_acc:
-                self.best_val_acc = val_acc
+            # Save best model based on top-1 accuracy
+            if val_top1 > self.best_val_top1:
+                self.best_val_top1 = val_top1
                 torch.save(self.model.state_dict(), self.checkpoint_path)
                 print('Saved best model')
 
@@ -148,12 +157,15 @@ class Trainer:
                        weights_only=True)
         )
 
-        # Evaluate on test set - get all 4 return values
-        _, test_acc, predictions, labels = evaluate(
-            self.model, self.test_loader, self.criterion, self.device
+        # Evaluate on test set
+        _, test_top1, test_top5, predictions, labels = evaluate(
+            self.model, self.test_loader, self.criterion,
+            self.device, self.num_classes
         )
 
-        print(f'Test Accuracy: {test_acc:.2f}%')
+        print(f'Test Top-1 Accuracy: {test_top1:.2f}%')
+        if test_top5 is not None:
+            print(f'Test Top-5 Accuracy: {test_top5:.2f}%')
 
         # Print classification report
         print(classification_report(labels, predictions,

@@ -30,7 +30,7 @@ from utils import Config, create_criterion, create_optimizer, set_seed
 
 # pylint: disable=too-many-arguments,too-many-locals
 def train_single_fold(cfg, fold_indices, train_dataset, weight_decay, fold,
-                      device, criterion):
+                      device, criterion, num_classes):
     """
     Train and evaluate a single CV fold.
 
@@ -42,9 +42,10 @@ def train_single_fold(cfg, fold_indices, train_dataset, weight_decay, fold,
         fold: Fold number for reproducibility
         device: Device to run training on
         criterion: Loss function
+        num_classes: Number of classes in the dataset
 
     Returns:
-        float: Validation accuracy for this fold
+        float: Validation top-1 accuracy for this fold
     """
     train_idx, val_idx = fold_indices
 
@@ -78,22 +79,22 @@ def train_single_fold(cfg, fold_indices, train_dataset, weight_decay, fold,
     # Train on this fold (silent - no epoch printing)
     for _ in range(cfg.training.epochs):
         train_one_epoch(fold_model, fold_train_loader,
-                        fold_optimizer, criterion, device)
+                        fold_optimizer, criterion, device, num_classes)
 
     # Evaluate on validation fold
-    _, val_acc, _, _ = evaluate(fold_model, fold_val_loader,
-                                criterion, device)
+    _, val_top1, _, _, _ = evaluate(fold_model, fold_val_loader,
+                                    criterion, device, num_classes)
 
     # Cleanup to prevent memory issues
     del fold_model, fold_optimizer
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
 
-    return val_acc
+    return val_top1
 
 
 # pylint: disable=too-many-locals
-def run_cv_grid_search(cfg, train_loader, device, criterion):
+def run_cv_grid_search(cfg, train_loader, device, criterion, num_classes):
     """
     Run cross-validation grid search for weight_decay tuning.
 
@@ -102,6 +103,7 @@ def run_cv_grid_search(cfg, train_loader, device, criterion):
         train_loader: Training data loader
         device: Device to run training on
         criterion: Loss function
+        num_classes: Number of classes in the dataset
 
     Returns:
         float: Best weight_decay value
@@ -128,7 +130,8 @@ def run_cv_grid_search(cfg, train_loader, device, criterion):
                 kf.split(range(len(train_dataset)))):
 
             val_acc = train_single_fold(
-                cfg, fold_indices, train_dataset, wd, fold, device, criterion
+                cfg, fold_indices, train_dataset, wd, fold, device, criterion,
+                num_classes
             )
             fold_accuracies.append(val_acc)
 
@@ -182,12 +185,16 @@ def main():
     print('[INFO] Loading data...')
     train_loader, _, _ = get_data_loaders(cfg)
 
+    # Get number of classes from the dataset
+    num_classes = len(train_loader.dataset.dataset.classes)
+
     # Create criterion
     criterion = create_criterion(cfg)
 
     # Run cross-validation
     print('[INFO] Starting cross-validation for weight_decay tuning...')
-    best_wd = run_cv_grid_search(cfg, train_loader, device, criterion)
+    best_wd = run_cv_grid_search(cfg, train_loader, device, criterion,
+                                 num_classes)
 
     # Print results
     print('='*60)
