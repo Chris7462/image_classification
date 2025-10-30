@@ -13,13 +13,26 @@ dataset:
   transforms:
     resize: 256
     crop: 224
-    random_resized_crop: false
+    random_resized_crop:
+      size: 224
+      scale: [0.7, 1.0]  # Less aggressive crop (70-100% of original)
+      # ratio: [0.75, 1.33]  # Optional: aspect ratio range (default: [3/4, 4/3])
     # Commented out to use default normalization values for the pretrained model
     # If you traing the model from scratch, consider uncommenting and adjusting these values
     # normalize:
     #   mean: [0.461, 0.437, 0.392]
     #   std: [0.272, 0.263, 0.263]
-    random_horizontal_flip: false
+    random_horizontal_flip: true
+    color_jitter:  # NEW: Add color augmentation
+      brightness: 0.2
+      contrast: 0.2
+      saturation: 0.2
+      hue: 0.1
+    random_affine:
+      degrees: 15
+      translate: [0.1, 0.1]
+      # shear: 0.2
+      # scale: [0.8, 1.0]
 
 # Model config
 model:

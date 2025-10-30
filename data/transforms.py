@@ -6,7 +6,7 @@ Training transforms include data augmentation techniques, while validation/test
 transforms apply only deterministic preprocessing.
 
 Supported Augmentations:
-    - Random resized crop or resize + random crop
+    - Random resized crop with configurable scale or resize + random crop
     - Random affine transformations (rotation, translation, shear, scale)
     - Random horizontal flip
     - Color jitter (brightness, contrast, saturation, hue)
@@ -39,13 +39,15 @@ def _get_transforms(transform_cfg):
     Args:
         transform_cfg: Configuration object containing transform parameters:
             - resize (int): Target size for resizing
-            - crop (int): Size for cropping
+            - crop (int): Size for cropping (used when random_resized_crop not provided)
             - normalize (dict, optional): Normalization parameters
                 (defaults to ImageNet values)
                 - mean (list): RGB mean values
                 - std (list): RGB standard deviation values
-            - random_resized_crop (bool, optional): Use RandomResizedCrop
-                instead of Resize+RandomCrop
+            - random_resized_crop (dict, optional): RandomResizedCrop parameters
+                - size (int): Output size
+                - scale (list, optional): Scale range [min, max] (default: [0.08, 1.0])
+                - ratio (list, optional): Aspect ratio range (default: [3/4, 4/3])
             - random_affine (dict, optional): Affine transformation parameters
                 - degrees (float): Rotation range
                 - translate (list): Translation range [x, y]
@@ -67,7 +69,11 @@ def _get_transforms(transform_cfg):
     Example:
         >>> from types import SimpleNamespace
         >>> cfg = SimpleNamespace(
-        ...     resize=256, crop=224, random_resized_crop=True,
+        ...     resize=256, crop=224,
+        ...     random_resized_crop=SimpleNamespace(
+        ...         size=224,
+        ...         scale=[0.7, 1.0]
+        ...     ),
         ...     random_horizontal_flip=True,
         ...     normalize=SimpleNamespace(
         ...         mean=[0.485, 0.456, 0.406],
@@ -91,9 +97,20 @@ def _get_transforms(transform_cfg):
     train_tf = []
 
     # Use RandomResizedCrop if configured
-    if getattr(transform_cfg, 'random_resized_crop', False):
-        train_tf.append(transforms.RandomResizedCrop(transform_cfg.crop))
-    else:  # otherwise fall back to Resize + CenterCrop
+    random_resized_crop = getattr(transform_cfg, 'random_resized_crop', None)
+
+    if random_resized_crop:
+        # Extract parameters from config
+        size = random_resized_crop.size
+        scale = getattr(random_resized_crop, 'scale', [0.08, 1.0])
+        ratio = getattr(random_resized_crop, 'ratio', [3./4., 4./3.])
+        train_tf.append(transforms.RandomResizedCrop(
+            size=size,
+            scale=tuple(scale),
+            ratio=tuple(ratio)
+        ))
+    else:
+        # Fall back to Resize + CenterCrop
         train_tf.extend([
             transforms.Resize(transform_cfg.resize),
             transforms.CenterCrop(transform_cfg.crop)
