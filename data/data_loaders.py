@@ -89,7 +89,7 @@ def _split_dataset(dataset, train_ratio=0.7, val_ratio=0.15, test_ratio=0.15,
     return train_idx, val_idx, test_idx
 
 
-def _create_imagefolder_loaders(cfg, train_tf, val_tf):
+def _create_imagefolder_loaders(cfg, train_tf, val_tf, test_tf):
     """
     Create DataLoaders for ImageFolder-based datasets from config.
 
@@ -97,9 +97,10 @@ def _create_imagefolder_loaders(cfg, train_tf, val_tf):
     Animals).
 
     Args:
-        cfg: Configuration object with dataset.config section
+        cfg: Configuration object with dataset section
         train_tf: Training transforms
-        val_tf: Validation/test transforms
+        val_tf: Validation transforms
+        test_tf: Test transforms
 
     Returns:
         tuple: (train_set, val_set, test_set) - Dataset subsets
@@ -107,8 +108,7 @@ def _create_imagefolder_loaders(cfg, train_tf, val_tf):
     Raises:
         FileNotFoundError: If dataset path does not exist
     """
-    dataset_cfg = cfg.dataset.config
-    data_root = dataset_cfg.data_root
+    data_root = cfg.dataset.data_root
 
     if not os.path.exists(data_root):
         raise FileNotFoundError(f'Dataset not found at: {data_root}')
@@ -119,10 +119,10 @@ def _create_imagefolder_loaders(cfg, train_tf, val_tf):
     # Split into train/val/test with configured ratios
     train_idx, val_idx, test_idx = _split_dataset(
         full_dataset,
-        train_ratio=dataset_cfg.split_ratios.train,
-        val_ratio=dataset_cfg.split_ratios.val,
-        test_ratio=dataset_cfg.split_ratios.test,
-        random_state=dataset_cfg.random_state
+        train_ratio=cfg.dataset.split_ratios.train,
+        val_ratio=cfg.dataset.split_ratios.val,
+        test_ratio=cfg.dataset.split_ratios.test,
+        random_state=cfg.random_seed
     )
 
     # Create subset datasets with appropriate transforms
@@ -131,7 +131,7 @@ def _create_imagefolder_loaders(cfg, train_tf, val_tf):
     val_set = Subset(datasets.ImageFolder(
         root=data_root, transform=val_tf), val_idx)
     test_set = Subset(datasets.ImageFolder(
-        root=data_root, transform=val_tf), test_idx)
+        root=data_root, transform=test_tf), test_idx)
 
     return train_set, val_set, test_set
 
@@ -141,9 +141,10 @@ def _create_cifar10_loaders(cfg, train_tf, val_tf):
     Create DataLoaders for CIFAR10 dataset from config.
 
     Args:
-        cfg: Configuration object with optional dataset.config section
+        cfg: Configuration object with optional dataset section
         train_tf: Training transforms
-        val_tf: Validation/test transforms
+        val_tf: Validation transforms
+        test_tf: Test transforms
 
     Returns:
         tuple: (train_set, val_set, test_set) - Datasets
@@ -151,12 +152,11 @@ def _create_cifar10_loaders(cfg, train_tf, val_tf):
     Note:
         CIFAR10 uses the standard train/test split from torchvision.
         Validation and test sets are identical (official test set).
-        If dataset.config.download_path is not specified, defaults to './data'.
+        If dataset.download_path is not specified, defaults to './data'.
     """
     # Get download path from config, or use default
-    if hasattr(cfg.dataset, 'config') and \
-       hasattr(cfg.dataset.config, 'download_path'):
-        download_path = cfg.dataset.config.download_path
+    if hasattr(cfg.dataset, 'download_path'):
+        download_path = cfg.dataset.download_path
     else:
         download_path = './data'
 
@@ -174,13 +174,14 @@ def get_data_loaders(cfg):
     Create train, validation, and test DataLoaders from configuration.
 
     Args:
-        cfg: Configuration object containing dataset parameters including:
-            - dataset.name: Dataset name ('flowers17', 'animals', 'cifar10')
-            - dataset.batch_size: Batch size for DataLoaders
-            - dataset.num_workers: Number of worker processes
-            - dataset.transforms: Transform configuration
-            - dataset.config: Dataset-specific configuration (optional for
-                some datasets)
+        cfg: Configuration object containing:
+            - random_seed: Random seed for reproducibility
+            - dataset.name: Dataset name ('flowers17', 'animals', 'cifar10', etc.)
+            - dataset.data_root: Path to dataset
+            - dataset.split_ratios: Train/val/test split ratios
+            - data_loader.batch_size: Batch size for DataLoaders
+            - data_loader.num_workers: Number of worker processes
+            - transforms: Transform configuration for train/val/test
 
     Returns:
         tuple: (train_loader, val_loader, test_loader) - DataLoader objects
@@ -194,13 +195,13 @@ def get_data_loaders(cfg):
         >>> train_loader, val_loader, test_loader = get_data_loaders(cfg)
         >>> print(f"Training batches: {len(train_loader)}")
     """
-    train_tf, val_tf = _get_transforms(cfg.dataset.transforms)
+    train_tf, val_tf, test_tf = _get_transforms(cfg.transforms)
     dataset_name = cfg.dataset.name.lower()
 
     # Create datasets based on name
     if dataset_name in ['animals', 'caltech-101', 'dogs_vs_cats', 'flowers17']:
         train_set, val_set, test_set = \
-            _create_imagefolder_loaders(cfg, train_tf, val_tf)
+            _create_imagefolder_loaders(cfg, train_tf, val_tf, test_tf)
     elif dataset_name == 'cifar10':
         train_set, val_set, test_set = \
             _create_cifar10_loaders(cfg, train_tf, val_tf)
@@ -211,8 +212,8 @@ def get_data_loaders(cfg):
 
     # Create DataLoaders with common parameters
     loader_kwargs = {
-        'batch_size': cfg.dataset.batch_size,
-        'num_workers': cfg.dataset.num_workers,
+        'batch_size': cfg.data_loader.batch_size,
+        'num_workers': cfg.data_loader.num_workers,
         'pin_memory': True
     }
 
