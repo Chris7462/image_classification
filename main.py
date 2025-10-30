@@ -183,7 +183,7 @@ def main(parsed_args):
 
     # Set random seed for reproducibility
     # pylint: disable=no-member
-    set_seed(cfg.dataset.config.random_state)
+    set_seed(cfg.random_seed)
     # pylint: enable=no-member
 
     trainer = Trainer(cfg)
