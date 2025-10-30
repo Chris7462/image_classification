@@ -1,0 +1,68 @@
+# Dataset config
+dataset:
+  name: dogs_vs_cats
+  batch_size: 32
+  num_workers: 4
+  config:
+    data_root: /data/kaggle/dogs_vs_cats/train_separate
+    split_ratios:
+      train: 0.6
+      val: 0.2
+      test: 0.2
+    random_state: 42
+  transforms:
+    random_resized_crop:
+      size: 227
+      scale: [0.7, 1.0]  # Less aggressive crop (70-100% of original)
+      # ratio: [0.75, 1.33]  # Optional: aspect ratio range (default: [3/4, 4/3])
+    resize: 256 # if not using random_resized_crop, fall back to resize + center crop
+    crop: 227
+    random_affine:
+      degrees: 15
+      translate: [0.1, 0.1]
+      # shear: 0.2
+      # scale: [0.8, 1.0]
+    random_horizontal_flip: true
+    color_jitter:  # NEW: Add color augmentation
+      brightness: 0.2
+      contrast: 0.2
+      saturation: 0.2
+      hue: 0.1
+    random_grayscale:
+      p: 0.1  # 10% chance to convert to grayscale
+    # Commented out to use default normalization values for the pretrained model
+    # If you traing the model from scratch, consider uncommenting and adjusting these values
+    normalize:
+      mean: [0.489, 0.451, 0.412]
+      std: [0.259, 0.251, 0.252]
+
+# Model config
+model:
+  backbone: alexnet
+  num_classes: 2
+
+# Loss config
+loss:
+  type: cross_entropy
+
+# Optimizer config
+optimizer:
+  type: Adam
+  lr: 0.001
+  weight_decay: 0.0002 # 0.1 worked best in experiments
+  momentum: 0.0
+  # Cross-validation is only used in optimize_hyperparameters.py
+  # main.py ignores this section
+  cross_validation:
+    weight_decay: [10.0, 1.0, 0.1, 0.01, 0.001, 0.0001]
+    folds: 5
+
+# Scheduler config
+scheduler:
+  type: none
+
+# Training config
+training:
+  epochs: 75
+  device: auto
+  checkpoint_path: dogs_vs_cats_alexnet.pth
