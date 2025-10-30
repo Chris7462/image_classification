@@ -84,30 +84,17 @@ def _get_transforms(transform_cfg):
         >>> # Apply to image
         >>> train_img = train_tf(image)
     """
-    # Get normalization parameters (default to ImageNet values)
-    if hasattr(transform_cfg, 'normalize'):
-        mean = transform_cfg.normalize.mean
-        std = transform_cfg.normalize.std
-    else:
-        # Default to ImageNet values for backward compatibility
-        mean = [0.485, 0.456, 0.406]
-        std = [0.229, 0.224, 0.225]
-
     # Training transforms with augmentation
     train_tf = []
 
     # Use RandomResizedCrop if configured
     random_resized_crop = getattr(transform_cfg, 'random_resized_crop', None)
-
     if random_resized_crop:
         # Extract parameters from config
-        size = random_resized_crop.size
-        scale = getattr(random_resized_crop, 'scale', [0.08, 1.0])
-        ratio = getattr(random_resized_crop, 'ratio', [3./4., 4./3.])
         train_tf.append(transforms.RandomResizedCrop(
-            size=size,
-            scale=tuple(scale),
-            ratio=tuple(ratio)
+            size=random_resized_crop.size,
+            scale=tuple(getattr(random_resized_crop, 'scale', [0.08, 1.0])),
+            ratio=tuple(getattr(random_resized_crop, 'ratio', [3./4., 4./3.]))
         ))
     else:
         # Fall back to Resize + CenterCrop
@@ -120,10 +107,10 @@ def _get_transforms(transform_cfg):
     random_affine = getattr(transform_cfg, 'random_affine', None)
     if random_affine:
         train_tf.append(transforms.RandomAffine(
-            degrees=random_affine.degrees,
-            translate=tuple(random_affine.translate),
-            shear=random_affine.shear,
-            scale=tuple(random_affine.scale)
+            degrees=getattr(random_affine, 'degrees', 0),
+            translate=tuple(getattr(random_affine, 'translate', [0.0, 0.0])),
+            shear=getattr(random_affine, 'shear', 0),
+            scale=tuple(getattr(random_affine, 'scale', [1.0, 1.0]))
         ))
 
     # Add horizontal flip if configured
@@ -144,6 +131,15 @@ def _get_transforms(transform_cfg):
     random_grayscale = getattr(transform_cfg, 'random_grayscale', None)
     if random_grayscale:
         train_tf.append(transforms.RandomGrayscale(p=random_grayscale.p))
+
+    # Get normalization parameters (default to ImageNet values)
+    if hasattr(transform_cfg, 'normalize'):
+        mean = transform_cfg.normalize.mean
+        std = transform_cfg.normalize.std
+    else:
+        # Default to ImageNet values for backward compatibility
+        mean = [0.485, 0.456, 0.406]
+        std = [0.229, 0.224, 0.225]
 
     train_tf.extend([transforms.ToTensor(), transforms.Normalize(mean, std)])
     train_tf = transforms.Compose(train_tf)

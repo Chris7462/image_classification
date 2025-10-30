@@ -198,7 +198,7 @@ def get_data_loaders(cfg):
     dataset_name = cfg.dataset.name.lower()
 
     # Create datasets based on name
-    if dataset_name in ['animals', 'caltech-101', 'flowers17']:
+    if dataset_name in ['animals', 'caltech-101', 'dogs_vs_cats', 'flowers17']:
         train_set, val_set, test_set = \
             _create_imagefolder_loaders(cfg, train_tf, val_tf)
     elif dataset_name == 'cifar10':
