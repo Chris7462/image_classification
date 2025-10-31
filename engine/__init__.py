@@ -17,9 +17,10 @@ Usage:
 """
 
 # Import main classes and functions
-from .train_eval import evaluate, train_one_epoch
+from .train_eval import evaluate, evaluate_with_tencrop, train_one_epoch
 
 __all__ = [
     'evaluate',
+    'evaluate_with_tencrop',
     'train_one_epoch'
 ]

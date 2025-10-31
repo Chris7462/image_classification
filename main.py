@@ -3,18 +3,20 @@ Image Classification Training Script.
 
 Main entry point for training image classification models. Orchestrates the
 entire training pipeline including data loading, model creation, training
-loop, evaluation, and visualization.
+loop, evaluation, and visualization. Supports TenCrop test-time augmentation
+for improved test accuracy.
 
 Usage:
     python main.py --config configs/flowers17_vgg.yaml
     python main.py --config configs/flowers17_minivggnet.yaml
+    python main.py --config configs/dogs_vs_cats_alexnet.yaml
 
 Command-line Arguments:
     --config: Path to YAML configuration file (required)
 
 Outputs:
     - outputs/checkpoints/<model_name>.pth: Best model weights
-    - outputs/plots/training_curves.png: Training/validation curves
+    - outputs/plots/<model_name>.png: Training/validation curves
 """
 
 
@@ -23,7 +25,7 @@ import os
 
 from data import get_data_loaders
 
-from engine import evaluate, train_one_epoch
+from engine import evaluate, evaluate_with_tencrop, train_one_epoch
 
 from models import create_model
 
@@ -157,21 +159,43 @@ class Trainer:
                        weights_only=True)
         )
 
-        # Evaluate on test set
-        _, test_top1, test_top5, predictions, labels = evaluate(
-            self.model, self.test_loader, self.criterion,
-            self.device, self.num_classes
-        )
+        # Check if TenCrop is enabled in config
+        use_tencrop = (hasattr(self.cfg.transforms, 'test') and
+                      hasattr(self.cfg.transforms.test, 'ten_crop') and
+                      self.cfg.transforms.test.ten_crop)
 
-        print(f'Test Top-1 Accuracy: {test_top1:.2f}%')
-        if test_top5 is not None:
-            print(f'Test Top-5 Accuracy: {test_top5:.2f}%')
+        if use_tencrop:
+            # Use TenCrop evaluation
+            print('[INFO] Evaluating with TenCrop augmentation...')
+            _, test_top1, test_top5, predictions, labels = \
+                evaluate_with_tencrop(
+                    self.model, self.test_loader, self.criterion,
+                    self.device, self.num_classes
+                )
 
-        # Print classification report
-        print(classification_report(labels, predictions,
-                                    target_names=self.class_names))
+            print(f'Test Top-1 Accuracy (TenCrop): {test_top1:.2f}%')
+            if test_top5 is not None:
+                print(f'Test Top-5 Accuracy (TenCrop): {test_top5:.2f}%')
 
-        print(f'Best model saved to: {self.checkpoint_path}')
+            print('\nClassification Report (TenCrop):')
+            print(classification_report(labels, predictions,
+                                        target_names=self.class_names))
+        else:
+            # Use regular evaluation
+            _, test_top1, test_top5, predictions, labels = evaluate(
+                self.model, self.test_loader, self.criterion,
+                self.device, self.num_classes
+            )
+
+            print(f'Test Top-1 Accuracy: {test_top1:.2f}%')
+            if test_top5 is not None:
+                print(f'Test Top-5 Accuracy: {test_top5:.2f}%')
+
+            print('\nClassification Report:')
+            print(classification_report(labels, predictions,
+                                        target_names=self.class_names))
+
+        print(f'\nBest model saved to: {self.checkpoint_path}')
 
         # Plot training curves
         plot_training_history(self.history, self.plot_path)

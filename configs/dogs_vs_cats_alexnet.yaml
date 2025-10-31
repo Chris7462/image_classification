@@ -45,7 +45,8 @@ transforms:
     random_grayscale:
       p: 0.1  # 10% chance to convert to grayscale
   # val:
-  # test:
+  test:
+    ten_crop: true
 
 # Model config
 model:
@@ -74,6 +75,6 @@ scheduler:
 
 # Training config
 training:
-  epochs: 75
+  epochs: 10
   device: auto
   checkpoint_path: dogs_vs_cats_alexnet.pth

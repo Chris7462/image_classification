@@ -11,6 +11,7 @@ Supported Augmentations:
     - Random horizontal flip
     - Color jitter (brightness, contrast, saturation, hue)
     - Random grayscale conversion
+    - TenCrop for test-time augmentation (test only)
 
 All transforms include normalization with configurable mean/std values
 (defaults to ImageNet normalization for transfer learning compatibility).
@@ -25,6 +26,7 @@ Example:
     >>> train_tf, val_tf, test_tf = get_transforms(cfg.transforms)
 """
 
+import torch
 from torchvision import transforms
 
 
@@ -35,12 +37,13 @@ def _get_transforms(transform_cfg):
     Creates three separate transform pipelines based on the config structure:
     - Training: Includes data augmentation for regularization
     - Validation: Deterministic preprocessing (uses common transforms)
-    - Test: Deterministic preprocessing (uses common transforms)
+    - Test: Deterministic preprocessing (uses common transforms) or TenCrop
 
     The transform application follows this logic:
     1. Apply split-specific transforms (train/val/test)
     2. If split doesn't define resize/crop, use common resize/crop
     3. Apply common normalize at the end
+    4. For test with ten_crop=true, apply TenCrop and per-crop normalization
 
     Args:
         transform_cfg: Configuration object containing:
@@ -70,6 +73,7 @@ def _get_transforms(transform_cfg):
                     - p (float): Probability of conversion
             - val: Validation-specific transforms (null to use only common)
             - test: Test-specific transforms (null to use only common)
+                - ten_crop (bool, optional): Enable TenCrop augmentation
 
     Returns:
         tuple: (train_transforms, val_transforms, test_transforms) - Composed pipelines
@@ -90,7 +94,7 @@ def _get_transforms(transform_cfg):
         ...         random_horizontal_flip=True
         ...     ),
         ...     val=None,
-        ...     test=None
+        ...     test=SimpleNamespace(ten_crop=True)
         ... )
         >>> train_tf, val_tf, test_tf = get_transforms(cfg)
     """
@@ -162,14 +166,28 @@ def _get_transforms(transform_cfg):
     ]
     val_tf = transforms.Compose(val_tf)
 
-    # Build test transforms (uses common resize + crop)
-    # test_cfg = getattr(transform_cfg, 'test', None)
-    test_tf = [
-        transforms.Resize(common_cfg.resize),
-        transforms.CenterCrop(common_cfg.crop),
-        transforms.ToTensor(),
-        transforms.Normalize(mean, std)
-    ]
-    test_tf = transforms.Compose(test_tf)
+    # Build test transforms (uses common resize + crop or TenCrop)
+    test_cfg = getattr(transform_cfg, 'test', None)
+
+    # Check if TenCrop is enabled for test
+    if test_cfg and hasattr(test_cfg, 'ten_crop') and test_cfg.ten_crop:
+        # TenCrop: 4 corners + 1 center + 5 flipped = 10 crops
+        test_tf = transforms.Compose([
+            transforms.Resize(common_cfg.resize),
+            transforms.TenCrop(common_cfg.crop),
+            transforms.Lambda(lambda crops: torch.stack([
+                transforms.Normalize(mean, std)(transforms.ToTensor()(crop))
+                for crop in crops
+            ]))
+        ])
+    else:
+        # Regular test transforms
+        test_tf = [
+            transforms.Resize(common_cfg.resize),
+            transforms.CenterCrop(common_cfg.crop),
+            transforms.ToTensor(),
+            transforms.Normalize(mean, std)
+        ]
+        test_tf = transforms.Compose(test_tf)
 
     return train_tf, val_tf, test_tf
