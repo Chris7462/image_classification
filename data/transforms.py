@@ -108,6 +108,12 @@ def _get_transforms(transform_cfg):
         mean = [0.485, 0.456, 0.406]
         std = [0.229, 0.224, 0.225]
 
+    # Create reusable normalize transform list
+    normalize_transforms = [
+        transforms.ToTensor(),
+        transforms.Normalize(mean, std)
+    ]
+
     # Build training transforms
     train_cfg = getattr(transform_cfg, 'train', None)
     train_tf = []
@@ -153,17 +159,17 @@ def _get_transforms(transform_cfg):
             rg = train_cfg.random_grayscale
             train_tf.append(transforms.RandomGrayscale(p=rg.p))
 
-    train_tf.extend([transforms.ToTensor(), transforms.Normalize(mean, std)])
+    # Add normalization transforms to training pipeline
+    train_tf.extend(normalize_transforms)
     train_tf = transforms.Compose(train_tf)
 
     # Build validation transforms (uses common resize + crop)
     # val_cfg = getattr(transform_cfg, 'val', None)
     val_tf = [
         transforms.Resize(common_cfg.resize),
-        transforms.CenterCrop(common_cfg.crop),
-        transforms.ToTensor(),
-        transforms.Normalize(mean, std)
+        transforms.CenterCrop(common_cfg.crop)
     ]
+    val_tf.extend(normalize_transforms)
     val_tf = transforms.Compose(val_tf)
 
     # Build test transforms (uses common resize + crop or TenCrop)
@@ -176,7 +182,7 @@ def _get_transforms(transform_cfg):
             transforms.Resize(common_cfg.resize),
             transforms.TenCrop(common_cfg.crop),
             transforms.Lambda(lambda crops: torch.stack([
-                transforms.Normalize(mean, std)(transforms.ToTensor()(crop))
+                transforms.Compose(normalize_transforms)(crop)
                 for crop in crops
             ]))
         ])
@@ -184,10 +190,9 @@ def _get_transforms(transform_cfg):
         # Regular test transforms
         test_tf = [
             transforms.Resize(common_cfg.resize),
-            transforms.CenterCrop(common_cfg.crop),
-            transforms.ToTensor(),
-            transforms.Normalize(mean, std)
+            transforms.CenterCrop(common_cfg.crop)
         ]
+        test_tf.extend(normalize_transforms)
         test_tf = transforms.Compose(test_tf)
 
     return train_tf, val_tf, test_tf
