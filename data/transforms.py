@@ -11,6 +11,7 @@ Supported Augmentations:
     - Random horizontal flip
     - Color jitter (brightness, contrast, saturation, hue)
     - Random grayscale conversion
+    - FiveCrop or TenCrop for test-time augmentation (test only)
 
 All transforms include normalization with configurable mean/std values
 (defaults to ImageNet normalization for transfer learning compatibility).
@@ -25,6 +26,7 @@ Example:
     >>> train_tf, val_tf, test_tf = get_transforms(cfg.transforms)
 """
 
+import torch
 from torchvision import transforms
 
 
@@ -35,12 +37,13 @@ def _get_transforms(transform_cfg):
     Creates three separate transform pipelines based on the config structure:
     - Training: Includes data augmentation for regularization
     - Validation: Deterministic preprocessing (uses common transforms)
-    - Test: Deterministic preprocessing (uses common transforms)
+    - Test: Deterministic preprocessing (uses common transforms) or FiveCrop/TenCrop
 
     The transform application follows this logic:
     1. Apply split-specific transforms (train/val/test)
     2. If split doesn't define resize/crop, use common resize/crop
     3. Apply common normalize at the end
+    4. For test with crop_augmentation, apply FiveCrop or TenCrop and per-crop normalization
 
     Args:
         transform_cfg: Configuration object containing:
@@ -70,6 +73,8 @@ def _get_transforms(transform_cfg):
                     - p (float): Probability of conversion
             - val: Validation-specific transforms (null to use only common)
             - test: Test-specific transforms (null to use only common)
+                - crop_augmentation (str, optional): Test-time augmentation type
+                    Options: 'none', 'five_crop', 'ten_crop'
 
     Returns:
         tuple: (train_transforms, val_transforms, test_transforms) - Composed pipelines
@@ -90,7 +95,7 @@ def _get_transforms(transform_cfg):
         ...         random_horizontal_flip=True
         ...     ),
         ...     val=None,
-        ...     test=None
+        ...     test=SimpleNamespace(crop_augmentation='ten_crop')
         ... )
         >>> train_tf, val_tf, test_tf = get_transforms(cfg)
     """
@@ -103,6 +108,12 @@ def _get_transforms(transform_cfg):
         # Default to ImageNet values
         mean = [0.485, 0.456, 0.406]
         std = [0.229, 0.224, 0.225]
+
+    # Create reusable normalize transform list
+    normalize_transforms = [
+        transforms.ToTensor(),
+        transforms.Normalize(mean, std)
+    ]
 
     # Build training transforms
     train_cfg = getattr(transform_cfg, 'train', None)
@@ -149,27 +160,54 @@ def _get_transforms(transform_cfg):
             rg = train_cfg.random_grayscale
             train_tf.append(transforms.RandomGrayscale(p=rg.p))
 
-    train_tf.extend([transforms.ToTensor(), transforms.Normalize(mean, std)])
+    # Add normalization transforms to training pipeline
+    train_tf.extend(normalize_transforms)
     train_tf = transforms.Compose(train_tf)
 
     # Build validation transforms (uses common resize + crop)
     # val_cfg = getattr(transform_cfg, 'val', None)
     val_tf = [
         transforms.Resize(common_cfg.resize),
-        transforms.CenterCrop(common_cfg.crop),
-        transforms.ToTensor(),
-        transforms.Normalize(mean, std)
+        transforms.CenterCrop(common_cfg.crop)
     ]
+    val_tf.extend(normalize_transforms)
     val_tf = transforms.Compose(val_tf)
 
-    # Build test transforms (uses common resize + crop)
-    # test_cfg = getattr(transform_cfg, 'test', None)
-    test_tf = [
-        transforms.Resize(common_cfg.resize),
-        transforms.CenterCrop(common_cfg.crop),
-        transforms.ToTensor(),
-        transforms.Normalize(mean, std)
-    ]
-    test_tf = transforms.Compose(test_tf)
+    # Build test transforms (uses common resize + crop or FiveCrop/TenCrop)
+    test_cfg = getattr(transform_cfg, 'test', None)
+
+    # Check crop_augmentation setting
+    crop_aug = None
+    if test_cfg and hasattr(test_cfg, 'crop_augmentation'):
+        crop_aug = test_cfg.crop_augmentation.lower()
+
+    if crop_aug == 'ten_crop':
+        # TenCrop: 4 corners + 1 center + 5 flipped = 10 crops
+        test_tf = transforms.Compose([
+            transforms.Resize(common_cfg.resize),
+            transforms.TenCrop(common_cfg.crop),
+            transforms.Lambda(lambda crops: torch.stack([
+                transforms.Compose(normalize_transforms)(crop)
+                for crop in crops
+            ]))
+        ])
+    elif crop_aug == 'five_crop':
+        # FiveCrop: 4 corners + 1 center = 5 crops (no flipping)
+        test_tf = transforms.Compose([
+            transforms.Resize(common_cfg.resize),
+            transforms.FiveCrop(common_cfg.crop),
+            transforms.Lambda(lambda crops: torch.stack([
+                transforms.Compose(normalize_transforms)(crop)
+                for crop in crops
+            ]))
+        ])
+    else:
+        # Regular test transforms (crop_aug == 'none' or not specified)
+        test_tf = [
+            transforms.Resize(common_cfg.resize),
+            transforms.CenterCrop(common_cfg.crop)
+        ]
+        test_tf.extend(normalize_transforms)
+        test_tf = transforms.Compose(test_tf)
 
     return train_tf, val_tf, test_tf

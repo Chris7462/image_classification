@@ -9,23 +9,33 @@ Functions:
     train_one_epoch: Execute one training epoch with backpropagation
     evaluate: Evaluate model on validation or test set with optional
         prediction collection
+    evaluate_with_multicrop: Evaluate model using FiveCrop or TenCrop test-time
+        augmentation
 
 Key Features:
     - Automatic device placement (CPU/CUDA/MPS)
     - Batch-wise loss accumulation for accurate epoch metrics
     - Memory-efficient evaluation with torch.no_grad()
     - Top-1 and Top-5 accuracy computation using torchmetrics
+    - FiveCrop and TenCrop test-time augmentation for improved accuracy
     - Optional prediction collection for detailed analysis
 
 Example:
-    >>> from engine import train_one_epoch, evaluate
+    >>> from engine import train_one_epoch, evaluate, evaluate_with_multicrop
     >>> train_loss, train_top1, train_top5 = train_one_epoch(
     ...     model, train_loader, optimizer, criterion, device, num_classes)
     >>> val_loss, val_top1, val_top5, preds, labels = evaluate(
     ...     model, val_loader, criterion, device, num_classes)
+    >>> # FiveCrop evaluation
+    >>> fc_loss, fc_top1, fc_top5, fc_preds, fc_labels = evaluate_with_multicrop(
+    ...     model, test_loader, criterion, device, num_classes, num_crops=5)
+    >>> # TenCrop evaluation
+    >>> tc_loss, tc_top1, tc_top5, tc_preds, tc_labels = evaluate_with_multicrop(
+    ...     model, test_loader, criterion, device, num_classes, num_crops=10)
 """
 
 import torch
+import torch.nn.functional as F
 from torchmetrics.classification import MulticlassAccuracy
 
 
@@ -77,6 +87,7 @@ def train_one_epoch(model, loader, optimizer, criterion, device, num_classes):
     top5_acc = top5_metric.compute().item() * 100.0 if top5_metric is not None else None
 
     return avg_loss, top1_acc, top5_acc
+
 
 # pylint: disable=too-many-locals
 def evaluate(model, loader, criterion, device, num_classes):
@@ -134,6 +145,103 @@ def evaluate(model, loader, criterion, device, num_classes):
             top1_metric.update(outputs, labels)
             if top5_metric is not None:
                 top5_metric.update(outputs, labels)
+
+            # Collect predictions and labels
+            all_preds.extend(preds.cpu().tolist())
+            all_labels.extend(labels.cpu().tolist())
+
+    avg_loss = total_loss / total
+    top1_acc = top1_metric.compute().item() * 100.0
+    top5_acc = top5_metric.compute().item() * 100.0 if top5_metric is not None else None
+
+    return avg_loss, top1_acc, top5_acc, all_preds, all_labels
+
+
+# pylint: disable=too-many-locals
+def evaluate_with_multicrop(model, loader, criterion, device, num_classes, num_crops):
+    """
+    Evaluate model using multi-crop test-time augmentation (FiveCrop or TenCrop).
+
+    This function applies multi-crop augmentation and averages the predictions
+    across all crops for improved accuracy. The DataLoader must be configured
+    with FiveCrop or TenCrop transforms.
+
+    Args:
+        model: Neural network model to evaluate
+        loader: DataLoader providing batches with multi-crop transformed images
+                Expected shape: [batch_size, num_crops, C, H, W]
+        criterion: Loss function
+        device: Device to run evaluation on ('cpu', 'cuda', or 'mps')
+        num_classes: Number of classes in the dataset
+        num_crops: Number of crops per image (5 for FiveCrop, 10 for TenCrop)
+
+    Returns:
+        tuple: (average_loss, top1_accuracy, top5_accuracy, predictions, labels) where:
+            - average_loss (float): Mean loss across all samples (using averaged probs)
+            - top1_accuracy (float): Top-1 accuracy as percentage (0-100)
+            - top5_accuracy (float): Top-5 accuracy as percentage (0-100),
+                or None if num_classes < 5
+            - predictions (list): List of predicted class indices (from averaged probs)
+            - labels (list): List of true class indices
+
+    Example:
+        >>> # Test with FiveCrop augmentation
+        >>> fc_loss, fc_top1, fc_top5, fc_preds, fc_labels = evaluate_with_multicrop(
+        ...     model, test_loader, criterion, device, num_classes, num_crops=5)
+        >>> print(f"FiveCrop Top-1 Accuracy: {fc_top1:.2f}%")
+        >>> # Test with TenCrop augmentation
+        >>> tc_loss, tc_top1, tc_top5, tc_preds, tc_labels = evaluate_with_multicrop(
+        ...     model, test_loader, criterion, device, num_classes, num_crops=10)
+        >>> print(f"TenCrop Top-1 Accuracy: {tc_top1:.2f}%")
+    """
+    model.eval()
+
+    # Initialize metrics
+    top1_metric = MulticlassAccuracy(num_classes=num_classes, top_k=1).to(device)
+    top5_metric = MulticlassAccuracy(num_classes=num_classes, top_k=5).to(device) if num_classes >= 5 else None
+
+    total_loss, total = 0.0, 0
+    all_preds, all_labels = [], []
+
+    with torch.no_grad():
+        for imgs, labels in loader:
+            # imgs shape: [batch_size, num_crops, C, H, W]
+            batch_size, n_crops, c, h, w = imgs.size()
+
+            # Verify num_crops matches expectation
+            assert n_crops == num_crops, \
+                f"Expected {num_crops} crops but got {n_crops}. " \
+                f"Check DataLoader transforms configuration."
+
+            # Reshape to [batch_size * num_crops, C, H, W] for forward pass
+            imgs = imgs.view(-1, c, h, w).to(device)
+            labels = labels.to(device)
+
+            # Forward pass on all crops
+            outputs = model(imgs)
+
+            # Reshape back to [batch_size, num_crops, num_classes]
+            outputs = outputs.view(batch_size, num_crops, -1)
+
+            # Average probabilities across all crops
+            # Convert logits to probabilities first
+            probs = F.softmax(outputs, dim=2)
+            avg_probs = torch.mean(probs, dim=1)  # [batch_size, num_classes]
+
+            # Convert back to logits for loss computation
+            avg_logits = torch.log(avg_probs + 1e-10)
+
+            # Compute loss on averaged predictions
+            loss = criterion(avg_logits, labels)
+            preds = avg_probs.argmax(1)
+
+            total_loss += loss.item() * batch_size
+            total += labels.size(0)
+
+            # Update metrics using averaged probabilities
+            top1_metric.update(avg_probs, labels)
+            if top5_metric is not None:
+                top5_metric.update(avg_probs, labels)
 
             # Collect predictions and labels
             all_preds.extend(preds.cpu().tolist())

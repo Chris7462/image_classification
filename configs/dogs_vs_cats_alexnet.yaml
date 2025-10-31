@@ -14,6 +14,7 @@ data_loader:
   # Could also add: shuffle, pin_memory, drop_last, etc.
 
 transforms:
+  # ----- Common Settings (train/val/test) -----
   # Transform application order:
   # 1. Apply split-specific transforms (train/val/test)
   # 2. If split doesn't define resize/crop, use common resize/crop
@@ -26,6 +27,8 @@ transforms:
     normalize:
       mean: [0.489, 0.451, 0.412]
       std: [0.259, 0.251, 0.252]
+
+  # ----- Training Augmentation -----
   train:
     random_resized_crop:  # this will override common resize + crop
       size: 227
@@ -44,8 +47,13 @@ transforms:
       hue: 0.1
     random_grayscale:
       p: 0.1  # 10% chance to convert to grayscale
+
+  # ----- Validation-Time Augmentation -----
   # val:
-  # test:
+
+  # ----- Test-Time Augmentation -----
+  test:
+    crop_augmentation: ten_crop  # Options: none, five_crop, ten_crop
 
 # Model config
 model:
