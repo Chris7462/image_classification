@@ -19,3 +19,4 @@
 # Ignore build, devel, and logs folder
 __pycache__
 .vscode
+datasets

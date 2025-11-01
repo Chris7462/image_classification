@@ -158,7 +158,7 @@ def _create_cifar10_loaders(cfg, train_tf, val_tf):
     if hasattr(cfg.dataset, 'download_path'):
         download_path = cfg.dataset.download_path
     else:
-        download_path = './data'
+        download_path = './datasets'
 
     train_set = datasets.CIFAR10(root=download_path, train=True,
                                  transform=train_tf, download=True)

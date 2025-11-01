@@ -241,6 +241,7 @@ if __name__ == '__main__':
         description='Train image classification model')
     ap.add_argument('--config', type=str, required=True,
                     help='Path to config YAML file')
-    args = ap.parse_args()
+    # args = ap.parse_args()
+    args = argparse.Namespace(config='./configs/cifar10_resnet50.yaml')
 
     main(args)

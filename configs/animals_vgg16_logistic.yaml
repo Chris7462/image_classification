@@ -1,40 +1,59 @@
-# Dataset config
+random_seed: 42
+
 dataset:
   name: animals
+  data_root: /data/kaggle/animals
+  split_ratios:
+    train: 0.75
+    val: 0.0
+    test: 0.25
+
+data_loader:
   batch_size: 32
   num_workers: 4
-  config:
-    data_root: /data/kaggle/animals
-    split_ratios:
-      train: 0.75
-      val: 0.0
-      test: 0.25
-    random_state: 42
-  transforms:
+  # Could also add: shuffle, pin_memory, drop_last, etc.
+
+transforms:
+  # ----- Common Settings (train/val/test) -----
+  # Transform application order:
+  # 1. Apply split-specific transforms (train/val/test)
+  # 2. If split doesn't define resize/crop, use common resize/crop
+  # 3. Apply common normalize at the end
+  common: # common setting for train/val/test
     resize: 256
     crop: 224
-    random_resized_crop:
-      size: 224
-      scale: [0.7, 1.0]
-      # ratio: [0.75, 1.33]  # Optional: aspect ratio range (default: [3/4, 4/3])
     # Commented out to use default normalization values for the pretrained model
     # If you traing the model from scratch, consider uncommenting and adjusting these values
     # normalize:
     #   mean: [0.461, 0.437, 0.392]
     #   std: [0.272, 0.263, 0.263]
-    random_horizontal_flip: true
-    color_jitter:  # NEW: Add color augmentation
-      brightness: 0.2
-      contrast: 0.2
-      saturation: 0.2
-      hue: 0.1
-    # Remove or comment out random_affine to avoid stacking transformations
+
+  # ----- Training Augmentation -----
+  train:
+    random_resized_crop:  # this will override common resize + crop
+      size: 224
+      scale: [0.7, 1.0]  # Less aggressive crop (70-100% of original)
+      # ratio: [0.75, 1.33]  # Optional: aspect ratio range (default: [3/4, 4/3])
     # random_affine:
     #   degrees: 30
     #   translate: [0.1, 0.1]
     #   shear: 0.2
     #   scale: [0.8, 1.2]
+    random_horizontal_flip: true
+    color_jitter:
+      brightness: 0.2
+      contrast: 0.2
+      saturation: 0.2
+      hue: 0.1
+    random_grayscale:
+      p: 0.1  # 10% chance to convert to grayscale
 
+  # ----- Validation-Time Augmentation -----
+  # val:
+
+  # ----- Test-Time Augmentation -----
+  # test:
+  #   crop_augmentation: ten_crop  # Options: none, five_crop, ten_crop
 
 # Model config
 model:

@@ -1,20 +1,48 @@
-# Dataset config
+random_seed: 42
+
 dataset:
   name: cifar10
+  download_path: ./datasets
+
+data_loader:
   batch_size: 128
   num_workers: 4
-  config:
-    download_path: ./data
-  transforms:
+  # Could also add: shuffle, pin_memory, drop_last, etc.
+
+transforms:
+  # ----- Common Settings (train/val/test) -----
+  # Transform application order:
+  # 1. Apply split-specific transforms (train/val/test)
+  # 2. If split doesn't define resize/crop, use common resize/crop
+  # 3. Apply common normalize at the end
+  common: # common setting for train/val/test
     resize: 256
     crop: 224
-    random_resized_crop: true
+    # Commented out to use default normalization values for the pretrained model
+    # If you traing the model from scratch, consider uncommenting and adjusting these values
+    # normalize:
+    #   mean: [0.489, 0.451, 0.412]
+    #   std: [0.259, 0.251, 0.252]
+
+  # ----- Training Augmentation -----
+  train:
+    random_resized_crop:  # this will override common resize + crop
+      size: 227
+      scale: [0.7, 1.0]  # Less aggressive crop (70-100% of original)
+      # ratio: [0.75, 1.33]  # Optional: aspect ratio range (default: [3/4, 4/3])
+    random_affine:
+      degrees: 15
+      translate: [0.1, 0.1]
+      # shear: 0.2
+      # scale: [0.8, 1.0]
     random_horizontal_flip: true
     color_jitter:
       brightness: 0.2
       contrast: 0.2
       saturation: 0.2
       hue: 0.1
+    random_grayscale:
+      p: 0.1  # 10% chance to convert to grayscale
 
 # Model config
 model:
@@ -42,4 +70,4 @@ scheduler:
 training:
   epochs: 100
   device: auto
-  checkpoint_path: cifar10_resnet50_model.pth
+  checkpoint_path: cifar10_resnet50.pth
