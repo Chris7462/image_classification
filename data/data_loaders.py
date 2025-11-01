@@ -29,11 +29,31 @@ import os
 
 from sklearn.model_selection import train_test_split
 
-from torch.utils.data import DataLoader, Subset
+import torch
+from torch.utils.data import DataLoader
 
 from torchvision import datasets
 
 from .transforms import _get_transforms
+
+
+class Subset(torch.utils.data.Dataset):
+    """A subset of a dataset at specified indices, exposing parent attributes."""
+
+    def __init__(self, dataset, indices):
+        self.dataset = dataset
+        self.indices = indices
+        # Expose common attributes from parent dataset
+        if hasattr(dataset, 'classes'):
+            self.classes = dataset.classes
+        if hasattr(dataset, 'class_to_idx'):
+            self.class_to_idx = dataset.class_to_idx
+
+    def __len__(self):
+        return len(self.indices)
+
+    def __getitem__(self, idx):
+        return self.dataset[self.indices[idx]]
 
 
 def _split_dataset(dataset, train_ratio=0.7, val_ratio=0.15, test_ratio=0.15,

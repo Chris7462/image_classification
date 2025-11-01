@@ -5,7 +5,7 @@ dataset:
   download_path: ./datasets
 
 data_loader:
-  batch_size: 128
+  batch_size: 32
   num_workers: 4
   # Could also add: shuffle, pin_memory, drop_last, etc.
 

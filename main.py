@@ -56,7 +56,7 @@ class Trainer:
             get_data_loaders(cfg)
 
         # Store class names and num_classes
-        self.class_names = self.train_loader.dataset.dataset.classes
+        self.class_names = self.train_loader.dataset.classes
         self.num_classes = len(self.class_names)
 
         # Model components
@@ -241,7 +241,8 @@ if __name__ == '__main__':
         description='Train image classification model')
     ap.add_argument('--config', type=str, required=True,
                     help='Path to config YAML file')
-    # args = ap.parse_args()
-    args = argparse.Namespace(config='./configs/cifar10_resnet50.yaml')
+    args = ap.parse_args()
+    # args = argparse.Namespace(config='./configs/cifar10_resnet50.yaml')
+    # args = argparse.Namespace(config='./configs/dogs_vs_cats_alexnet.yaml')
 
     main(args)
