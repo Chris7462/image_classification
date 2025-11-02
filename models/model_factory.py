@@ -78,6 +78,10 @@ def create_model(cfg):
         # VGG16 with frozen features and logistic regression classifier
         model = VGG16LogisticRegression(num_classes=num_classes)
 
+    elif backbone == 'resnet50_logistic':
+        # ResNet50 with frozen features and logistic regression classifier
+        model = VGG16LogisticRegression(num_classes=num_classes)
+
     elif backbone == 'vgg16':
         pretrained = cfg.model.pretrained
         freeze_backbone = cfg.model.freeze_backbone
