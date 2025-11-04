@@ -11,11 +11,24 @@ Usage:
     python main.py --config configs/flowers17_minivggnet.yaml
     python main.py --config configs/dogs_vs_cats_alexnet.yaml
 
+    # Resume training
+    python main.py --config configs/flowers17_vgg.yaml \
+        --resume outputs/checkpoints/flowers17_vgg_last.pth
+
+    # Resume with learning rate override
+    python main.py --config configs/flowers17_vgg.yaml \
+        --resume outputs/checkpoints/flowers17_vgg_last.pth \
+        --override-lr 1e-5
+
 Command-line Arguments:
     --config: Path to YAML configuration file (required)
+    --resume: Path to checkpoint file to resume training from (optional)
+    --override-lr: Override learning rate when resuming training (optional)
 
 Outputs:
     - outputs/checkpoints/<dataset_name>_<backbone>.pth: Best model weights
+    - outputs/checkpoints/<dataset_name>_<backbone>_last.pth: Last epoch checkpoint
+    - outputs/checkpoints/<dataset_name>_<backbone>_epoch_N.pth: Periodic checkpoints
     - outputs/plots/<dataset_name>_<backbone>.png: Training/validation curves
 """
 
@@ -40,16 +53,19 @@ from utils import (Config, create_criterion, create_optimizer,
 class Trainer:
     """Orchestrates the training pipeline for image classification."""
 
-    def __init__(self, cfg):
+    def __init__(self, cfg, resume_checkpoint=None, override_lr=None):
         """
         Initialize trainer with configuration.
 
         Args:
             cfg: Configuration object from YAML file
+            resume_checkpoint: Path to checkpoint file to resume from (optional)
+            override_lr: Learning rate to override when resuming (optional)
         """
         self.cfg = cfg
         self.device = self._setup_device()
-        self.checkpoint_path, self.plot_path = self._setup_directories()
+        self.checkpoint_path, self.last_checkpoint_path, self.plot_path = \
+            self._setup_directories()
 
         # Data loaders
         self.train_loader, self.val_loader, self.test_loader = \
@@ -73,6 +89,17 @@ class Trainer:
             'val_loss': [], 'val_top1_accuracy': [], 'val_top5_accuracy': []
         }
         self.best_val_top1 = 0.0
+        self.start_epoch = 0
+
+        # Load checkpoint if resuming
+        if resume_checkpoint:
+            self._load_checkpoint(resume_checkpoint)
+
+            # Override learning rate if specified
+            if override_lr is not None:
+                for param_group in self.optimizer.param_groups:
+                    param_group['lr'] = override_lr
+                print(f'[INFO] Overriding learning rate to {override_lr}')
 
     def _setup_device(self):
         """Set up and return training device."""
@@ -94,22 +121,87 @@ class Trainer:
         os.makedirs(checkpoints_dir, exist_ok=True)
         os.makedirs(plots_dir, exist_ok=True)
 
-        # Auto-generate checkpoint name from dataset and model backbone
-        checkpoint_filename = f'{self.cfg.dataset.name}_{self.cfg.model.backbone}.pth'
-        checkpoint_path = os.path.join(checkpoints_dir, checkpoint_filename)
+        # Auto-generate checkpoint names from dataset and model backbone
+        base_filename = f'{self.cfg.dataset.name}_{self.cfg.model.backbone}'
+        checkpoint_path = os.path.join(checkpoints_dir, f'{base_filename}_best.pth')
+        last_checkpoint_path = os.path.join(checkpoints_dir, f'{base_filename}_last.pth')
 
-        # Auto-generate plot filename from checkpoint name
-        base_name = os.path.splitext(checkpoint_filename)[0]
-        plot_filename = f'{base_name}.png'
+        # Auto-generate plot filename
+        plot_filename = f'{base_filename}.png'
         plot_path = os.path.join(plots_dir, plot_filename)
 
-        return checkpoint_path, plot_path
+        return checkpoint_path, last_checkpoint_path, plot_path
+
+    def _load_checkpoint(self, checkpoint_path):
+        """
+        Load checkpoint to resume training.
+
+        Args:
+            checkpoint_path: Path to checkpoint file
+        """
+        print(f'[INFO] Loading checkpoint from {checkpoint_path}...')
+        checkpoint = torch.load(checkpoint_path, map_location=self.device,
+                               weights_only=False)
+
+        # Load model state
+        self.model.load_state_dict(checkpoint['model_state_dict'])
+        print('[INFO] Model state loaded')
+
+        # Load optimizer state
+        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        print('[INFO] Optimizer state loaded')
+
+        # Load scheduler state if it exists
+        if self.scheduler and 'scheduler_state_dict' in checkpoint and \
+           checkpoint['scheduler_state_dict'] is not None:
+            self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+            print('[INFO] Scheduler state loaded')
+
+        # Load training state
+        self.start_epoch = checkpoint['epoch']
+        self.best_val_top1 = checkpoint.get('best_val_top1', 0.0)
+        self.history = checkpoint.get('history', self.history)
+
+        print(f'[INFO] Resuming from epoch {self.start_epoch}')
+        print(f'[INFO] Best validation top-1 accuracy so far: {self.best_val_top1:.2f}%')
+
+    def _save_checkpoint(self, epoch, is_best=False, is_periodic=False):
+        """
+        Save checkpoint.
+
+        Args:
+            epoch: Current epoch number
+            is_best: Whether this is the best model so far
+            is_periodic: Whether this is a periodic checkpoint (every 5 epochs)
+        """
+        checkpoint = {
+            'epoch': epoch + 1,  # Save next epoch to resume from
+            'model_state_dict': self.model.state_dict(),
+            'optimizer_state_dict': self.optimizer.state_dict(),
+            'scheduler_state_dict': self.scheduler.state_dict() if self.scheduler else None,
+            'best_val_top1': self.best_val_top1,
+            'history': self.history
+        }
+
+        # Always save last checkpoint
+        torch.save(checkpoint, self.last_checkpoint_path)
+
+        # Save best checkpoint
+        if is_best:
+            torch.save(checkpoint, self.checkpoint_path)
+            print(f'[INFO] Saved best model to {self.checkpoint_path}')
+
+        # Save periodic checkpoint (every 5 epochs)
+        if is_periodic:
+            periodic_path = self.checkpoint_path.replace('_best.pth', f'_epoch_{epoch+1}.pth')
+            torch.save(checkpoint, periodic_path)
+            print(f'[INFO] Saved periodic checkpoint to {periodic_path}')
 
     def train(self):
         """Execute the training loop."""
         print('[INFO] training network...')
 
-        for epoch in range(self.cfg.training.epochs):
+        for epoch in range(self.start_epoch, self.cfg.training.epochs):
             # Train and validate
             train_loss, train_top1, train_top5 = train_one_epoch(
                 self.model, self.train_loader, self.optimizer,
@@ -143,11 +235,19 @@ class Trainer:
                 log_msg += f' - val_top5: {val_top5:.2f}%'
             print(log_msg)
 
-            # Save best model based on top-1 accuracy
-            if val_top1 > self.best_val_top1:
+            # Check if this is the best model
+            is_best = val_top1 > self.best_val_top1
+            if is_best:
                 self.best_val_top1 = val_top1
-                torch.save(self.model.state_dict(), self.checkpoint_path)
-                print('Saved best model')
+
+            # Check if this is a periodic checkpoint (every 5 epochs)
+            is_periodic = (epoch + 1) % 5 == 0
+
+            # Save checkpoints
+            self._save_checkpoint(epoch, is_best=is_best, is_periodic=is_periodic)
+
+            # Update training plot after every epoch
+            plot_training_history(self.history, self.plot_path)
 
     def evaluate(self):
         """Evaluate on test set and generate visualizations."""
@@ -216,9 +316,7 @@ class Trainer:
                                         target_names=self.class_names))
 
         print(f'\nBest model saved to: {self.checkpoint_path}')
-
-        # Plot training curves
-        plot_training_history(self.history, self.plot_path)
+        print(f'Training curves saved to: {self.plot_path}')
 
 
 def main(parsed_args):
@@ -230,7 +328,8 @@ def main(parsed_args):
     set_seed(cfg.random_seed)
     # pylint: enable=no-member
 
-    trainer = Trainer(cfg)
+    trainer = Trainer(cfg, resume_checkpoint=parsed_args.resume,
+                     override_lr=parsed_args.override_lr)
     trainer.train()
     trainer.evaluate()
 
@@ -240,6 +339,10 @@ if __name__ == '__main__':
         description='Train image classification model')
     ap.add_argument('--config', type=str, required=True,
                     help='Path to config YAML file')
+    ap.add_argument('--resume', type=str, default=None,
+                    help='Path to checkpoint file to resume training from')
+    ap.add_argument('--override-lr', type=float, default=None,
+                    help='Override learning rate when resuming training')
     args = ap.parse_args()
     # args = argparse.Namespace(config='./configs/cifar10_resnet50.yaml')
     # args = argparse.Namespace(config='./configs/dogs_vs_cats_alexnet.yaml')
