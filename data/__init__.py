@@ -13,8 +13,9 @@ Usage:
 """
 
 # Import main classes and functions
-from .data_loaders import get_data_loaders
+from .data_loaders import get_data_loaders, get_dataset_for_stats
 
 __all__ = [
-    'get_data_loaders'
+    'get_data_loaders',
+    'get_dataset_for_stats'
 ]

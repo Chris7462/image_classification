@@ -16,6 +16,7 @@ Functions:
         stratification
     _create_imagefolder_loaders: Create ImageFolder dataset loaders
     _create_cifar10_loaders: Create CIFAR10 dataset loaders
+    _create_tiny_imagenet200_loaders: Create Tiny ImageNet-200 dataset loaders
     get_data_loaders: Create train/val/test DataLoaders from config
 
 Example:
@@ -26,13 +27,16 @@ Example:
 """
 
 import os
+from pathlib import Path
 
 from sklearn.model_selection import train_test_split
 
 import torch
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 
 from torchvision import datasets
+
+from PIL import Image
 
 from .transforms import _get_transforms
 
@@ -54,6 +58,118 @@ class Subset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         return self.dataset[self.indices[idx]]
+
+
+class TinyImageNetDataset(Dataset):
+    """
+    Tiny ImageNet-200 Dataset.
+
+    Handles the unique structure of Tiny ImageNet where:
+    - Training images are in train/n########/images/*.JPEG
+    - Validation images are in val/images/*.JPEG with annotations in val_annotations.txt
+
+    Args:
+        root: Path to tiny-imagenet-200 directory
+        split: 'train', 'val', or 'test'
+        transform: Transform to apply to images
+        train_test_split_ratio: For 'test' split, ratio of training data to use (default: 0.1)
+    """
+
+    def __init__(self, root, split='train', transform=None, train_test_split_ratio=0.1,
+                 random_state=42):
+        self.root = Path(root)
+        self.split = split
+        self.transform = transform
+        self.train_test_split_ratio = train_test_split_ratio
+        self.random_state = random_state
+
+        # Get all class directories from train folder
+        train_dir = self.root / 'train'
+        self.classes = sorted([d.name for d in train_dir.iterdir() if d.is_dir()])
+        self.class_to_idx = {cls: idx for idx, cls in enumerate(self.classes)}
+
+        self.samples = []
+        self.targets = []
+
+        if split in ['train', 'test']:
+            self._load_train_test_data()
+        elif split == 'val':
+            self._load_val_data()
+        else:
+            raise ValueError(f"Split must be 'train', 'val', or 'test', got {split}")
+
+    def _load_train_test_data(self):
+        """Load training or test data by splitting the training directory."""
+        train_dir = self.root / 'train'
+
+        # Collect all samples per class
+        all_class_samples = {}
+        for class_name in self.classes:
+            class_dir = train_dir / class_name / 'images'
+            class_samples = []
+
+            if class_dir.exists():
+                for img_path in sorted(class_dir.glob('*.JPEG')):
+                    class_samples.append((str(img_path), self.class_to_idx[class_name]))
+
+            all_class_samples[class_name] = class_samples
+
+        # Split each class and select appropriate subset based on self.split
+        for class_name, class_samples in all_class_samples.items():
+            if len(class_samples) > 0:
+                # Split this class's samples
+                indices = list(range(len(class_samples)))
+                train_indices, test_indices = train_test_split(
+                    indices,
+                    test_size=self.train_test_split_ratio,
+                    random_state=self.random_state
+                )
+
+                # Select appropriate indices based on split type
+                selected_indices = train_indices if self.split == 'train' else test_indices
+
+                # Add selected samples
+                for idx in selected_indices:
+                    img_path, label = class_samples[idx]
+                    self.samples.append(img_path)
+                    self.targets.append(label)
+
+    def _load_val_data(self):
+        """Load validation data using val_annotations.txt."""
+        val_dir = self.root / 'val' / 'images'
+        annotations_file = self.root / 'val' / 'val_annotations.txt'
+
+        if not annotations_file.exists():
+            raise FileNotFoundError(f"Validation annotations not found at {annotations_file}")
+
+        # Parse annotations file
+        with open(annotations_file, 'r') as f:
+            for line in f:
+                parts = line.strip().split('\t')
+                if len(parts) >= 2:
+                    img_name = parts[0]
+                    class_name = parts[1]
+
+                    img_path = val_dir / img_name
+                    if img_path.exists() and class_name in self.class_to_idx:
+                        self.samples.append(str(img_path))
+                        self.targets.append(self.class_to_idx[class_name])
+
+    def __len__(self):
+        return len(self.samples)
+
+    def __getitem__(self, idx):
+        img_path = self.samples[idx]
+        target = self.targets[idx]
+
+        # Load image
+        img = Image.open(img_path).convert('RGB')
+
+        # Apply transform
+        if self.transform is not None:
+            img = self.transform(img)
+
+        return img, target
 
 
 def _split_dataset(dataset, train_ratio=0.7, val_ratio=0.15, test_ratio=0.15,
@@ -189,6 +305,60 @@ def _create_cifar10_loaders(cfg, train_tf, val_tf):
     return train_set, val_set, test_set
 
 
+def _create_tiny_imagenet200_loaders(cfg, train_tf, val_tf, test_tf):
+    """
+    Create DataLoaders for Tiny ImageNet-200 dataset from config.
+
+    Args:
+        cfg: Configuration object with dataset section
+        train_tf: Training transforms
+        val_tf: Validation transforms
+        test_tf: Test transforms
+
+    Returns:
+        tuple: (train_set, val_set, test_set) - Dataset objects
+
+    Raises:
+        FileNotFoundError: If dataset path does not exist
+    """
+    data_root = cfg.dataset.data_root
+
+    if not os.path.exists(data_root):
+        raise FileNotFoundError(f'Dataset not found at: {data_root}')
+
+    # Get train_test_split_ratio from config, default to 0.1 (50 images per class)
+    # 50 images / 500 images = 0.1
+    if hasattr(cfg.dataset, 'train_test_split_ratio'):
+        train_test_split_ratio = cfg.dataset.train_test_split_ratio
+    else:
+        train_test_split_ratio = 0.1
+
+    # Create datasets for each split
+    train_set = TinyImageNetDataset(
+        root=data_root,
+        split='train',
+        transform=train_tf,
+        train_test_split_ratio=train_test_split_ratio,
+        random_state=cfg.random_seed
+    )
+
+    val_set = TinyImageNetDataset(
+        root=data_root,
+        split='val',
+        transform=val_tf
+    )
+
+    test_set = TinyImageNetDataset(
+        root=data_root,
+        split='test',
+        transform=test_tf,
+        train_test_split_ratio=train_test_split_ratio,
+        random_state=cfg.random_seed
+    )
+
+    return train_set, val_set, test_set
+
+
 def get_data_loaders(cfg):
     """
     Create train, validation, and test DataLoaders from configuration.
@@ -196,9 +366,11 @@ def get_data_loaders(cfg):
     Args:
         cfg: Configuration object containing:
             - random_seed: Random seed for reproducibility
-            - dataset.name: Dataset name ('flowers17', 'animals', 'cifar10', etc.)
+            - dataset.name: Dataset name ('flowers17', 'animals', 'cifar10',
+              'tiny_imagenet200', etc.)
             - dataset.data_root: Path to dataset
-            - dataset.split_ratios: Train/val/test split ratios
+            - dataset.split_ratios: Train/val/test split ratios (not used for
+              tiny_imagenet200)
             - data_loader.batch_size: Batch size for DataLoaders
             - data_loader.num_workers: Number of worker processes
             - transforms: Transform configuration for train/val/test
@@ -225,6 +397,9 @@ def get_data_loaders(cfg):
     elif dataset_name == 'cifar10':
         train_set, val_set, test_set = \
             _create_cifar10_loaders(cfg, train_tf, val_tf)
+    elif dataset_name == 'tiny_imagenet200':
+        train_set, val_set, test_set = \
+            _create_tiny_imagenet200_loaders(cfg, train_tf, val_tf, test_tf)
     else:
         raise ValueError(
             f"Unsupported dataset: '{cfg.dataset.name}'."
@@ -242,3 +417,84 @@ def get_data_loaders(cfg):
     test_loader = DataLoader(test_set, shuffle=False, **loader_kwargs)
 
     return train_loader, val_loader, test_loader
+
+
+def get_dataset_for_stats(cfg):
+    """
+    Create a DataLoader for calculating dataset statistics.
+
+    This function loads the full training dataset (before any splits) with
+    minimal transforms: Resize -> CenterCrop -> ToTensor (no normalization).
+    This is used for calculating mean and std values for normalization.
+
+    Args:
+        cfg: Configuration object containing:
+            - dataset.name: Dataset name
+            - dataset.data_root or dataset.download_path: Path to dataset
+            - transforms.common.resize: Resize dimension
+            - transforms.common.crop: Crop dimension
+            - data_loader.batch_size: Batch size
+            - data_loader.num_workers: Number of workers
+
+    Returns:
+        DataLoader: DataLoader with full dataset for statistics calculation
+
+    Raises:
+        ValueError: If dataset name is not supported
+        FileNotFoundError: If dataset path does not exist
+
+    Example:
+        >>> cfg = Config('configs/flowers17_vgg.yaml')
+        >>> stats_loader = get_dataset_for_stats(cfg)
+        >>> # Calculate mean and std from stats_loader
+    """
+    from torchvision import transforms
+
+    # Create minimal transform: Resize -> CenterCrop -> ToTensor (no normalization)
+    stats_transform = transforms.Compose([
+        transforms.Resize(cfg.transforms.common.resize),
+        transforms.CenterCrop(cfg.transforms.common.crop),
+        transforms.ToTensor()
+    ])
+
+    dataset_name = cfg.dataset.name.lower()
+
+    # Load full dataset based on dataset type
+    if dataset_name in ['animals', 'caltech-101', 'dogs_vs_cats', 'flowers17']:
+        data_root = cfg.dataset.data_root
+        if not os.path.exists(data_root):
+            raise FileNotFoundError(f'Dataset not found at: {data_root}')
+        full_dataset = datasets.ImageFolder(root=data_root, transform=stats_transform)
+
+    elif dataset_name == 'cifar10':
+        download_path = getattr(cfg.dataset, 'download_path', './datasets')
+        # Use training set for CIFAR10 (50k images)
+        full_dataset = datasets.CIFAR10(
+            root=download_path,
+            train=True,
+            transform=stats_transform,
+            download=True
+        )
+
+    elif dataset_name == 'tiny_imagenet200':
+        data_root = cfg.dataset.data_root
+        if not os.path.exists(data_root):
+            raise FileNotFoundError(f'Dataset not found at: {data_root}')
+        # Use full training directory (all 500 images per class)
+        train_dir = Path(data_root) / 'train'
+        full_dataset = datasets.ImageFolder(root=str(train_dir), transform=stats_transform)
+
+    else:
+        raise ValueError(f"Unsupported dataset: '{cfg.dataset.name}'")
+
+    # Create DataLoader
+    loader_kwargs = {
+        'batch_size': cfg.data_loader.batch_size,
+        'num_workers': cfg.data_loader.num_workers,
+        'pin_memory': True,
+        'shuffle': False
+    }
+
+    stats_loader = DataLoader(full_dataset, **loader_kwargs)
+
+    return stats_loader
