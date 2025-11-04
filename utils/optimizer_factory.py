@@ -8,7 +8,7 @@ and scheduling strategies for deep learning.
 Supported Components:
     Loss Functions: CrossEntropy, MSE, BCE, BCEWithLogits
     Optimizers: Adam, SGD, AdamW, RMSprop
-    Schedulers: StepLR, CosineAnnealing, ReduceLROnPlateau
+    Schedulers: StepLR, CosineAnnealing, ReduceLROnPlateau, LinearDecay
 
 Functions:
     create_criterion: Create loss function from config
@@ -126,6 +126,11 @@ def create_scheduler(optimizer, cfg):
                 mode='max',
                 factor=cfg.scheduler.factor,
                 patience=cfg.scheduler.patience
+                )
+    elif sched_type == 'linear_decay':
+        return optim.lr_scheduler.LambdaLR(
+                optimizer,
+                lr_lambda=lambda epoch: max(0.0, 1.0 - epoch / float(cfg.training.epochs))
                 )
     else:
         raise ValueError(f'Unsupported scheduler type: {sched_type}')
