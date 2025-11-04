@@ -31,7 +31,7 @@ transforms:
       scale: [0.7, 1.0]  # Less aggressive crop (70-100% of original)
       ratio: [0.75, 1.33]  # Optional: aspect ratio range (default: [3/4, 4/3])
     random_affine:
-      degrees: 0
+      degrees: 18
       translate: [0.2, 0.2]
       shear: 0.15
       # scale: [0.8, 1.0]
@@ -55,16 +55,16 @@ loss:
 
 # Optimizer config
 optimizer:
-  type: SGD
-  lr: 0.005
+  type: adam
+  lr: 0.001
   weight_decay: 0.0
-  momentum: 0.9
+  # momentum: 0.9
 
 # Scheduler config
 scheduler:
-  type: linear_decay
+  type: none
 
 # Training config
 training:
-  epochs: 70
+  epochs: 50
   device: auto
