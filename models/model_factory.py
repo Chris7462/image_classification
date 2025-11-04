@@ -7,6 +7,7 @@ optional backbone freezing for transfer learning.
 
 Supported Models:
     - minivggnet: Custom lightweight CNN for small images
+    - minigooglenet: Custom lightweight Inception-based CNN
     - alexnet: AlexNet architecture for 227x227 images
     - vgg16: VGG16 with ImageNet pretrained weights
     - vgg16_logistic: VGG16 features + logistic regression
@@ -28,6 +29,7 @@ Example:
 """
 
 from models.custom.alexnet import AlexNet
+from models.custom.minigooglenet import MiniGoogLeNet
 from models.custom.minivggnet import MiniVGGNet
 from models.custom.vgg16_logistic import VGG16LogisticRegression
 
@@ -69,6 +71,10 @@ def create_model(cfg):
     if backbone == 'minivggnet':
         # Custom MiniVGGNet doesn't use pretrained weights
         model = MiniVGGNet(num_classes=num_classes)
+
+    elif backbone == 'minigooglenet':
+        # Custom MiniGoogLeNet with Inception modules
+        model = MiniGoogLeNet(num_classes=num_classes)
 
     elif backbone == 'alexnet':
         # Custom AlexNet trained from scratch
