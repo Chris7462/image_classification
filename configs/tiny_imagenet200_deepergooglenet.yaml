@@ -20,9 +20,9 @@ transforms:
     crop: 64
     # Commented out to use default normalization values for the pretrained model
     # If you traing the model from scratch, consider uncommenting and adjusting these values
-    # normalize:
-    #   mean: [0.4914, 0.4822, 0.4465]
-    #   std: [0.2470, 0.2435, 0.2616]
+    normalize:
+      mean: [0.480, 0.448, 0.397]
+      std: [0.276, 0.269, 0.282]
 
   # ----- Training Augmentation -----
   train:
