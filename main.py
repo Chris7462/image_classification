@@ -243,5 +243,6 @@ if __name__ == '__main__':
     args = ap.parse_args()
     # args = argparse.Namespace(config='./configs/cifar10_resnet50.yaml')
     # args = argparse.Namespace(config='./configs/dogs_vs_cats_alexnet.yaml')
+    # args = argparse.Namespace(config='./configs/tiny_imagenet200_deepergooglenet.yaml')
 
     main(args)
