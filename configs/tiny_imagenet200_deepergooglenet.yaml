@@ -57,7 +57,7 @@ loss:
 optimizer:
   type: adam
   lr: 0.001
-  weight_decay: 0.0
+  weight_decay: 0.0002
   # momentum: 0.9
 
 # Scheduler config
@@ -66,5 +66,5 @@ scheduler:
 
 # Training config
 training:
-  epochs: 50
+  epochs: 70
   device: auto
