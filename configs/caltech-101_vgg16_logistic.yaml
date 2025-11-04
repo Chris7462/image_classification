@@ -1,7 +1,7 @@
 random_seed: 42
 
 dataset:
-  name: animals
+  name: caltech-101
   data_root: /data/kaggle/caltech-101
   split_ratios:
     train: 0.75
@@ -85,4 +85,3 @@ scheduler:
 training:
   epochs: 50
   device: auto
-  checkpoint_path: caltech-101_vgg16_logistic.pth

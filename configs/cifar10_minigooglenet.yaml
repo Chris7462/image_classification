@@ -68,4 +68,3 @@ scheduler:
 training:
   epochs: 70
   device: auto
-  checkpoint_path: cifar10_minigooglenet.pth

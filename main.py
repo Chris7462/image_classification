@@ -15,8 +15,8 @@ Command-line Arguments:
     --config: Path to YAML configuration file (required)
 
 Outputs:
-    - outputs/checkpoints/<model_name>.pth: Best model weights
-    - outputs/plots/<model_name>.png: Training/validation curves
+    - outputs/checkpoints/<dataset_name>_<backbone>.pth: Best model weights
+    - outputs/plots/<dataset_name>_<backbone>.png: Training/validation curves
 """
 
 
@@ -94,13 +94,12 @@ class Trainer:
         os.makedirs(checkpoints_dir, exist_ok=True)
         os.makedirs(plots_dir, exist_ok=True)
 
-        checkpoint_path = os.path.join(
-            checkpoints_dir, self.cfg.training.checkpoint_path
-        )
+        # Auto-generate checkpoint name from dataset and model backbone
+        checkpoint_filename = f'{self.cfg.dataset.name}_{self.cfg.model.backbone}.pth'
+        checkpoint_path = os.path.join(checkpoints_dir, checkpoint_filename)
 
         # Auto-generate plot filename from checkpoint name
-        base_name = os.path.splitext(
-            self.cfg.training.checkpoint_path)[0]
+        base_name = os.path.splitext(checkpoint_filename)[0]
         plot_filename = f'{base_name}.png'
         plot_path = os.path.join(plots_dir, plot_filename)
 

@@ -84,4 +84,3 @@ scheduler:
 training:
   epochs: 75
   device: auto
-  checkpoint_path: dogs_vs_cats_alexnet.pth

@@ -84,4 +84,3 @@ scheduler:
 training:
   epochs: 50
   device: auto
-  checkpoint_path: flower17_vgg16_logistic.pth

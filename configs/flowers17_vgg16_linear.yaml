@@ -82,4 +82,3 @@ scheduler:
 training:
   epochs: 10
   device: auto  # 'auto' for automatic detection, or specify 'cuda', 'mps', 'cpu'
-  checkpoint_path: flowers17_vgg16_linear.pth

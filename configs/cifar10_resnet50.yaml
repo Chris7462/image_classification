@@ -70,4 +70,3 @@ scheduler:
 training:
   epochs: 100
   device: auto
-  checkpoint_path: cifar10_resnet50.pth
