@@ -10,6 +10,11 @@ Supported Models:
     - minigooglenet: Custom lightweight Inception-based CNN
     - deepergooglenet: Deeper Inception-based CNN with full 4-branch modules
     - alexnet: AlexNet architecture for 227x227 images
+    - resnet18_custom: ResNet-18 trained from scratch
+    - resnet34_custom: ResNet-34 trained from scratch
+    - resnet50_custom: ResNet-50 trained from scratch
+    - resnet101_custom: ResNet-101 trained from scratch
+    - resnet152_custom: ResNet-152 trained from scratch
     - vgg16: VGG16 with ImageNet pretrained weights
     - vgg16_logistic: VGG16 features + logistic regression
     - resnet50: ResNet50 with ImageNet pretrained weights
@@ -33,6 +38,9 @@ from models.custom.alexnet import AlexNet
 from models.custom.deepergooglenet import DeeperGoogLeNet
 from models.custom.minigooglenet import MiniGoogLeNet
 from models.custom.minivggnet import MiniVGGNet
+from models.custom.resnet_custom import (resnet18_custom, resnet34_custom,
+                                         resnet50_custom, resnet101_custom,
+                                         resnet152_custom)
 from models.custom.vgg16_logistic import VGG16LogisticRegression
 
 from torch import nn
@@ -85,6 +93,26 @@ def create_model(cfg):
     elif backbone == 'alexnet':
         # Custom AlexNet trained from scratch
         model = AlexNet(num_classes=num_classes)
+
+    elif backbone == 'resnet18_custom':
+        # Custom ResNet-18 trained from scratch
+        model = resnet18_custom(num_classes=num_classes)
+
+    elif backbone == 'resnet34_custom':
+        # Custom ResNet-34 trained from scratch
+        model = resnet34_custom(num_classes=num_classes)
+
+    elif backbone == 'resnet50_custom':
+        # Custom ResNet-50 trained from scratch
+        model = resnet50_custom(num_classes=num_classes)
+
+    elif backbone == 'resnet101_custom':
+        # Custom ResNet-101 trained from scratch
+        model = resnet101_custom(num_classes=num_classes)
+
+    elif backbone == 'resnet152_custom':
+        # Custom ResNet-152 trained from scratch
+        model = resnet152_custom(num_classes=num_classes)
 
     elif backbone == 'vgg16_logistic':
         # VGG16 with frozen features and logistic regression classifier
