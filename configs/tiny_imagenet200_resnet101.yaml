@@ -1,0 +1,70 @@
+random_seed: 42
+
+dataset:
+  name: tiny_imagenet200
+  data_root: /data/tiny-imagenet-200
+
+data_loader:
+  batch_size: 64
+  num_workers: 4
+  # Could also add: shuffle, pin_memory, drop_last, etc.
+
+transforms:
+  # ----- Common Settings (train/val/test) -----
+  # Transform application order:
+  # 1. Apply split-specific transforms (train/val/test)
+  # 2. If split doesn't define resize/crop, use common resize/crop
+  # 3. Apply common normalize at the end
+  common:
+    resize: 64
+    crop: 64
+    # Commented out to use default normalization values for the pretrained model
+    # If you traing the model from scratch, consider uncommenting and adjusting these values
+    normalize:
+      mean: [0.480, 0.448, 0.397]
+      std: [0.276, 0.269, 0.282]
+
+  # ----- Training Augmentation -----
+  train:
+    random_resized_crop:  # this will override common resize + crop
+      size: 64
+      scale: [0.7, 1.0]  # Less aggressive crop (70-100% of original)
+      ratio: [0.75, 1.33]  # Optional: aspect ratio range (default: [3/4, 4/3])
+    random_affine:
+      degrees: 18
+      translate: [0.2, 0.2]
+      shear: 0.15
+      # scale: [0.8, 1.0]
+    random_horizontal_flip: true
+    # color_jitter:
+    #   brightness: 0.2
+    #   contrast: 0.2
+    #   saturation: 0.2
+    #   hue: 0.1
+    # random_grayscale:
+    #   p: 0.1  # 10% chance to convert to grayscale
+
+# Model config
+model:
+  backbone: resnet101_custom
+  num_classes: 200
+
+# Loss config
+loss:
+  type: cross_entropy
+
+# Optimizer config
+optimizer:
+  type: SGD
+  lr: 0.1
+  weight_decay: 0.0005
+  momentum: 0.9
+
+# Scheduler config
+scheduler:
+  type: none
+
+# Training config
+training:
+  epochs: 50
+  device: auto
