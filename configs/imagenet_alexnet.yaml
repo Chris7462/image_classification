@@ -6,8 +6,10 @@ dataset:
 
 data_loader:
   batch_size: 128
-  num_workers: 4
-  # Could also add: shuffle, pin_memory, drop_last, etc.
+  num_workers: 8
+  pin_memory: true
+  prefetch_factor: 2
+  persistent_workers: true
 
 transforms:
   # ----- Common Settings (train/val/test) -----

@@ -467,9 +467,11 @@ def get_data_loaders(cfg):
 
     # Create DataLoaders with common parameters
     loader_kwargs = {
-        'batch_size': cfg.data_loader.batch_size,
-        'num_workers': cfg.data_loader.num_workers,
-        'pin_memory': True
+        'batch_size': getattr(cfg.data_loader, 'batch_size', 32),
+        'num_workers': getattr(cfg.data_loader, 'num_workers', 4),
+        'pin_memory': getattr(cfg.data_loader, 'pin_memory', True),
+        'prefetch_factor': getattr(cfg.data_loader, 'prefetch_factor', 2),
+        'persistent_workers': getattr(cfg.data_loader, 'persistent_workers', True)
     }
 
     train_loader = DataLoader(train_set, shuffle=True, **loader_kwargs)
