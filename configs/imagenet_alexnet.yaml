@@ -21,8 +21,8 @@ transforms:
     # Commented out to use default normalization values for the pretrained model
     # If you traing the model from scratch, consider uncommenting and adjusting these values
     normalize:
-      mean: [0.489, 0.451, 0.412]
-      std: [0.259, 0.251, 0.252]
+      mean: [0.485, 0.455, 0.403]
+      std: [0.273, 0.264, 0.277]
 
   # ----- Training Augmentation -----
   train:
@@ -33,7 +33,7 @@ transforms:
     random_affine:
       degrees: 15
       translate: [0.1, 0.1]
-      # shear: 0.2
+      shear: 0.1
       # scale: [0.8, 1.0]
     random_horizontal_flip: true
     color_jitter:
@@ -62,10 +62,10 @@ loss:
 
 # Optimizer config
 optimizer:
-  type: Adam
-  lr: 0.001
-  weight_decay: 0.0002 # 0.1 worked best in experiments
-  momentum: 0.0
+  type: SGD
+  lr: 0.02
+  weight_decay: 0.0005
+  momentum: 0.9
   # Cross-validation is only used in optimize_hyperparameters.py
   # main.py ignores this section
   cross_validation:
@@ -78,5 +78,5 @@ scheduler:
 
 # Training config
 training:
-  epochs: 75
+  epochs: 90
   device: auto
