@@ -17,6 +17,7 @@ Functions:
     _create_imagefolder_loaders: Create ImageFolder dataset loaders
     _create_cifar10_loaders: Create CIFAR10 dataset loaders
     _create_tiny_imagenet200_loaders: Create Tiny ImageNet-200 dataset loaders
+    _create_imagenet_loaders: Create ImageNet dataset loaders
     get_data_loaders: Create train/val/test DataLoaders from config
 
 Example:
@@ -359,6 +360,62 @@ def _create_tiny_imagenet200_loaders(cfg, train_tf, val_tf, test_tf):
     return train_set, val_set, test_set
 
 
+def _create_imagenet_loaders(cfg, train_tf, val_tf, test_tf):
+    """
+    Create DataLoaders for ImageNet dataset from config.
+
+    Uses the standard ImageNet train/val folder structure. Splits the training
+    folder into 90% train and 10% test, while using the validation folder
+    as the validation set.
+
+    Args:
+        cfg: Configuration object with dataset section
+        train_tf: Training transforms
+        val_tf: Validation transforms
+        test_tf: Test transforms
+
+    Returns:
+        tuple: (train_set, val_set, test_set) - Dataset objects
+
+    Raises:
+        FileNotFoundError: If dataset path does not exist
+    """
+    data_root = cfg.dataset.data_root
+
+    if not os.path.exists(data_root):
+        raise FileNotFoundError(f'Dataset not found at: {data_root}')
+
+    train_dir = os.path.join(data_root, 'train')
+    val_dir = os.path.join(data_root, 'val')
+
+    if not os.path.exists(train_dir):
+        raise FileNotFoundError(f'Training directory not found at: {train_dir}')
+    if not os.path.exists(val_dir):
+        raise FileNotFoundError(f'Validation directory not found at: {val_dir}')
+
+    # Load full training dataset for splitting
+    full_train_dataset = datasets.ImageFolder(root=train_dir)
+
+    # Split training data into 90% train, 10% test with stratification
+    train_idx, test_idx = train_test_split(
+        list(range(len(full_train_dataset))),
+        test_size=0.1,
+        random_state=cfg.random_seed,
+        stratify=full_train_dataset.targets
+    )
+
+    # Create train and test datasets with appropriate transforms
+    train_set = Subset(datasets.ImageFolder(
+        root=train_dir, transform=train_tf), train_idx)
+    test_set = Subset(datasets.ImageFolder(
+        root=train_dir, transform=test_tf), test_idx)
+
+    # Load validation dataset separately (no splitting)
+    val_set = datasets.ImageFolder(root=val_dir, transform=val_tf)
+
+    return train_set, val_set, test_set
+
+
 def get_data_loaders(cfg):
     """
     Create train, validation, and test DataLoaders from configuration.
@@ -367,10 +424,10 @@ def get_data_loaders(cfg):
         cfg: Configuration object containing:
             - random_seed: Random seed for reproducibility
             - dataset.name: Dataset name ('flowers17', 'animals', 'cifar10',
-              'tiny_imagenet200', etc.)
+              'tiny_imagenet200', 'imagenet', etc.)
             - dataset.data_root: Path to dataset
             - dataset.split_ratios: Train/val/test split ratios (not used for
-              tiny_imagenet200)
+              tiny_imagenet200 or imagenet)
             - data_loader.batch_size: Batch size for DataLoaders
             - data_loader.num_workers: Number of worker processes
             - transforms: Transform configuration for train/val/test
@@ -400,6 +457,9 @@ def get_data_loaders(cfg):
     elif dataset_name == 'tiny_imagenet200':
         train_set, val_set, test_set = \
             _create_tiny_imagenet200_loaders(cfg, train_tf, val_tf, test_tf)
+    elif dataset_name == 'imagenet':
+        train_set, val_set, test_set = \
+            _create_imagenet_loaders(cfg, train_tf, val_tf, test_tf)
     else:
         raise ValueError(
             f"Unsupported dataset: '{cfg.dataset.name}'."
@@ -483,6 +543,16 @@ def get_dataset_for_stats(cfg):
         # Use full training directory (all 500 images per class)
         train_dir = Path(data_root) / 'train'
         full_dataset = datasets.ImageFolder(root=str(train_dir), transform=stats_transform)
+
+    elif dataset_name == 'imagenet':
+        data_root = cfg.dataset.data_root
+        if not os.path.exists(data_root):
+            raise FileNotFoundError(f'Dataset not found at: {data_root}')
+        # Use full training directory
+        train_dir = os.path.join(data_root, 'train')
+        if not os.path.exists(train_dir):
+            raise FileNotFoundError(f'Training directory not found at: {train_dir}')
+        full_dataset = datasets.ImageFolder(root=train_dir, transform=stats_transform)
 
     else:
         raise ValueError(f"Unsupported dataset: '{cfg.dataset.name}'")
