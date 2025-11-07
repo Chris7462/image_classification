@@ -113,24 +113,20 @@ def create_scheduler(optimizer, cfg):
         return optim.lr_scheduler.StepLR(
                 optimizer,
                 step_size=cfg.scheduler.step_size,
-                gamma=cfg.scheduler.gamma
-                )
+                gamma=cfg.scheduler.gamma)
     elif sched_type == 'cosine':
         return optim.lr_scheduler.CosineAnnealingLR(
                 optimizer,
-                T_max=cfg.scheduler.t_max
-                )
+                T_max=cfg.scheduler.t_max)
     elif sched_type == 'reduce_on_plateau':
         return optim.lr_scheduler.ReduceLROnPlateau(
                 optimizer,
                 mode='max',
                 factor=cfg.scheduler.factor,
-                patience=cfg.scheduler.patience
-                )
+                patience=cfg.scheduler.patience)
     elif sched_type == 'linear_decay':
         return optim.lr_scheduler.LambdaLR(
                 optimizer,
-                lr_lambda=lambda epoch: max(0.0, 1.0 - epoch / float(cfg.training.epochs))
-                )
+                lr_lambda=lambda epoch: max(0.0, 1.0 - epoch / float(cfg.training.epochs)))
     else:
         raise ValueError(f'Unsupported scheduler type: {sched_type}')

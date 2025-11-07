@@ -35,6 +35,7 @@ Example:
 """
 
 from models.custom.alexnet import AlexNet
+from models.custom.alexnet_classic import AlexNetClassic
 from models.custom.deepergooglenet import DeeperGoogLeNet
 from models.custom.minigooglenet import MiniGoogLeNet
 from models.custom.minivggnet import MiniVGGNet
@@ -93,6 +94,10 @@ def create_model(cfg):
     elif backbone == 'alexnet':
         # Custom AlexNet trained from scratch
         model = AlexNet(num_classes=num_classes)
+
+    elif backbone == 'alexnetclassic':
+        # Custom AlexNet trained from scratch
+        model = AlexNetClassic(num_classes=num_classes)
 
     elif backbone == 'resnet18_custom':
         # Custom ResNet-18 trained from scratch

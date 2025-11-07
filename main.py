@@ -224,8 +224,11 @@ class Trainer:
             if self.scheduler:
                 self.scheduler.step()
 
+            current_lr = self.optimizer.param_groups[0]['lr']
+
             # Log progress
             log_msg = (f'Epoch {epoch + 1}/{self.cfg.training.epochs} - '
+                       f'LR: {current_lr:.6f} - '
                        f'loss: {train_loss:.4f} - top1: {train_top1:.2f}%')
             if train_top5 is not None:
                 log_msg += f' - top5: {train_top5:.2f}%'

@@ -29,6 +29,8 @@ Example:
     >>> plot_training_history(history, 'outputs/plots/training_curves.png')
 """
 
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 import numpy as np
