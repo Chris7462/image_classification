@@ -1,0 +1,86 @@
+random_seed: 42
+
+dataset:
+  name: imagenet
+  data_root: /data/imagenet/dataset
+
+data_loader:
+  batch_size: 128
+  num_workers: 8
+  pin_memory: true
+  prefetch_factor: 2
+  persistent_workers: true
+
+transforms:
+  # ----- Common Settings (train/val/test) -----
+  # Transform application order:
+  # 1. Apply split-specific transforms (train/val/test)
+  # 2. If split doesn't define resize/crop, use common resize/crop
+  # 3. Apply common normalize at the end
+  common: # common setting for train/val/test
+    resize: 256
+    crop: 224
+    # Commented out to use default normalization values for the pretrained model
+    # If you traing the model from scratch, consider uncommenting and adjusting these values
+    normalize:
+      mean: [0.485, 0.456, 0.406]
+      std: [0.229, 0.224, 0.225]
+
+  # ----- Training Augmentation -----
+  train:
+    random_resized_crop:  # this will override common resize + crop
+      size: 224
+      scale: [0.08, 1.0]  # Less aggressive crop (70-100% of original)
+      # ratio: [0.75, 1.33]  # Optional: aspect ratio range (default: [3/4, 4/3])
+    random_affine:
+      degrees: 15
+      translate: [0.1, 0.1]
+      shear: 0.1
+      # scale: [0.8, 1.0]
+    random_horizontal_flip: true
+    # color_jitter:
+    #   brightness: 0.2
+    #   contrast: 0.2
+    #   saturation: 0.2
+    #   hue: 0.1
+    # random_grayscale:
+    #   p: 0.1  # 10% chance to convert to grayscale
+
+  # ----- Validation-Time Augmentation -----
+  # val:
+
+  # ----- Test-Time Augmentation -----
+  # test:
+  #   crop_augmentation: ten_crop  # Options: none, five_crop, ten_crop
+
+# Model config
+model:
+  backbone: googlenet_custom
+  num_classes: 1000
+
+# Loss config
+loss:
+  type: cross_entropy
+
+# Optimizer config
+optimizer:
+  type: SGD
+  lr: 0.02
+  weight_decay: 0.0002
+  momentum: 0.9
+  # Cross-validation is only used in optimize_hyperparameters.py
+  # main.py ignores this section
+  cross_validation:
+    weight_decay: [10.0, 1.0, 0.1, 0.01, 0.001, 0.0001]
+    folds: 5
+
+# Scheduler config
+scheduler:
+  type: step_lr
+  step_size: 30  # Decay every 30 epochs from epoch 50
+  gamma: 0.1     # Multiply by 0.1 each time
+
+# Training config
+training:
+  epochs: 90
+  device: auto

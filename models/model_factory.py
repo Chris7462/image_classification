@@ -38,6 +38,7 @@ Example:
 from models.custom.alexnet import AlexNet
 from models.custom.alexnet_classic import AlexNetClassic
 from models.custom.deepergooglenet import DeeperGoogLeNet
+from models.custom.googlenet_custom import GoogLeNetCustom
 from models.custom.minigooglenet import MiniGoogLeNet
 from models.custom.minivggnet import MiniVGGNet
 from models.custom.resnet_custom import (resnet18_custom, resnet34_custom,
@@ -88,6 +89,10 @@ def create_model(cfg):
     elif backbone == 'minigooglenet':
         # Custom MiniGoogLeNet with Inception modules
         model = MiniGoogLeNet(num_classes=num_classes)
+
+    elif backbone == 'googlenet_custom':
+        # Custom GoogLeNet (Inception v1) with full 4-branch modules
+        model = GoogLeNetCustom(num_classes=num_classes)
 
     elif backbone == 'deepergooglenet':
         # Custom DeeperGoogLeNet with full 4-branch Inception modules
