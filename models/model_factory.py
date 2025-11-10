@@ -15,6 +15,7 @@ Supported Models:
     - resnet50_custom: ResNet-50 trained from scratch
     - resnet101_custom: ResNet-101 trained from scratch
     - resnet152_custom: ResNet-152 trained from scratch
+    - vgg16_custom: VGG16 with batch normalization trained from scratch
     - vgg16: VGG16 with ImageNet pretrained weights
     - vgg16_logistic: VGG16 features + logistic regression
     - resnet50: ResNet50 with ImageNet pretrained weights
@@ -42,6 +43,7 @@ from models.custom.minivggnet import MiniVGGNet
 from models.custom.resnet_custom import (resnet18_custom, resnet34_custom,
                                          resnet50_custom, resnet101_custom,
                                          resnet152_custom)
+from models.custom.vgg16_custom import VGG16Custom
 from models.custom.vgg16_logistic import VGG16LogisticRegression
 
 from torch import nn
@@ -118,6 +120,10 @@ def create_model(cfg):
     elif backbone == 'resnet152_custom':
         # Custom ResNet-152 trained from scratch
         model = resnet152_custom(num_classes=num_classes)
+
+    elif backbone == 'vgg16_custom':
+        # Custom VGG16 with batch normalization trained from scratch
+        model = VGG16Custom(num_classes=num_classes)
 
     elif backbone == 'vgg16_logistic':
         # VGG16 with frozen features and logistic regression classifier
