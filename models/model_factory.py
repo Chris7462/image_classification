@@ -111,7 +111,7 @@ def create_model(cfg):
         # Classic AlexNet trained from scratch (original 2012 paper)
         model = AlexNetClassic(num_classes=num_classes)
 
-    elif backbone == 'squeezenet':
+    elif backbone == 'squeezenet_custom':
         # SqueezeNet 1.0 - efficient architecture with Fire modules
         model = SqueezeNetCustom(num_classes=num_classes)
 
