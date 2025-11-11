@@ -45,7 +45,7 @@ class VGG16Custom(nn.Module):
         Args:
             num_classes: Number of output classes (default: 1000)
         """
-        super(VGG16Custom, self).__init__()
+        super().__init__()
         self.feature = nn.Sequential(
             # Block 1: (CONV => BN => RELU) * 2 => POOL
             nn.Conv2d(in_channels=3, out_channels=64,
