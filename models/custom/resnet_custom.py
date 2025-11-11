@@ -205,6 +205,32 @@ class ResNetCustom(nn.Module):
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Linear(512 * block.expansion, num_classes)
 
+        # Initialize weights
+        self._initialize_weights()
+
+    def _initialize_weights(self):
+        """
+        Initialize model weights using best practices for ReLU networks.
+
+        Applies:
+        - Kaiming normal initialization for Conv2d layers (optimal for ReLU)
+        - Constant initialization for BatchNorm2d (weight=1, bias=0)
+        - Normal initialization for Linear layers (mean=0, std=0.01)
+        - Constant initialization for all biases (0)
+        """
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out',
+                                       nonlinearity='relu')
+                if m.bias is not None:
+                    nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.BatchNorm2d):
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.Linear):
+                nn.init.normal_(m.weight, 0, 0.01)
+                nn.init.constant_(m.bias, 0)
+
     def _make_layer(self, block, out_channels, blocks, stride=1):
         """
         Create a residual stage with specified number of blocks.
