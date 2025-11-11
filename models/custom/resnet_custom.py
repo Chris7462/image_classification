@@ -185,7 +185,7 @@ class ResNetCustom(nn.Module):
                    (e.g., [3, 4, 6, 3] for ResNet-50)
             num_classes: Number of output classes
         """
-        super(ResNetCustom, self).__init__()
+        super().__init__()
         self.in_channels = 64
 
         # Initial convolution: 7x7, stride 2, padding 3

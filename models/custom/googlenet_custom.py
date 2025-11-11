@@ -109,7 +109,7 @@ class Inception(nn.Module):
             ch5x5: Number of filters in 5x5 convolution
             pool_proj: Number of filters in 1x1 projection after max pooling
         """
-        super(Inception, self).__init__()
+        super().__init__()
 
         # Branch 1: 1x1 conv
         self.branch1 = ConvModule(in_channels, ch1x1, kernel_size=1,

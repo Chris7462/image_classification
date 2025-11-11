@@ -10,15 +10,19 @@ Supported Models:
     - minigooglenet: Custom lightweight Inception-based CNN
     - deepergooglenet: Deeper Inception-based CNN with full 4-branch modules
     - alexnet: AlexNet architecture for 227x227 images
+    - alexnetclassic: Classic AlexNet (original 2012 paper)
+    - squeezenet: SqueezeNet 1.0 architecture for efficient computation
     - resnet18_custom: ResNet-18 trained from scratch
     - resnet34_custom: ResNet-34 trained from scratch
     - resnet50_custom: ResNet-50 trained from scratch
     - resnet101_custom: ResNet-101 trained from scratch
     - resnet152_custom: ResNet-152 trained from scratch
     - vgg16_custom: VGG16 with batch normalization trained from scratch
+    - googlenet_custom: GoogLeNet (Inception v1) trained from scratch
     - vgg16: VGG16 with ImageNet pretrained weights
     - vgg16_logistic: VGG16 features + logistic regression
     - resnet50: ResNet50 with ImageNet pretrained weights
+    - resnet50_logistic: ResNet50 features + logistic regression
 
 Transfer Learning Features:
     - Load pretrained weights from torchvision
@@ -44,6 +48,7 @@ from models.custom.minivggnet import MiniVGGNet
 from models.custom.resnet_custom import (resnet18_custom, resnet34_custom,
                                          resnet50_custom, resnet101_custom,
                                          resnet152_custom)
+from models.custom.squeezenet_custom import SqueezeNetCustom
 from models.custom.vgg16_custom import VGG16Custom
 from models.custom.vgg16_logistic import VGG16LogisticRegression
 
@@ -103,8 +108,12 @@ def create_model(cfg):
         model = AlexNet(num_classes=num_classes)
 
     elif backbone == 'alexnetclassic':
-        # Custom AlexNet trained from scratch
+        # Classic AlexNet trained from scratch (original 2012 paper)
         model = AlexNetClassic(num_classes=num_classes)
+
+    elif backbone == 'squeezenet':
+        # SqueezeNet 1.0 - efficient architecture with Fire modules
+        model = SqueezeNetCustom(num_classes=num_classes)
 
     elif backbone == 'resnet18_custom':
         # Custom ResNet-18 trained from scratch

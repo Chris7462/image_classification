@@ -1,8 +1,8 @@
 """
 AlexNet Architecture (Classic Version).
 
-PyTorch implementation of the original AlexNet from "ImageNet Classification 
-with Deep Convolutional Neural Networks" (Krizhevsky et al., 2012). This is 
+PyTorch implementation of the original AlexNet from "ImageNet Classification
+with Deep Convolutional Neural Networks" (Krizhevsky et al., 2012). This is
 the classic version without batch normalization, matching the original paper.
 
 Architecture:
@@ -10,8 +10,8 @@ Architecture:
     Block 2: [Conv5x5(256) -> ReLU -> MaxPool]
     Block 3: [Conv3x3(384) -> ReLU -> Conv3x3(384) -> ReLU ->
         Conv3x3(256) -> ReLU -> MaxPool]
-    FC: [Flatten -> Dropout(0.5) -> Linear(4096) -> ReLU -> 
-        Dropout(0.5) -> Linear(4096) -> ReLU -> Dropout(0.5) -> 
+    FC: [Flatten -> Dropout(0.5) -> Linear(4096) -> ReLU ->
+        Dropout(0.5) -> Linear(4096) -> ReLU -> Dropout(0.5) ->
         Linear(num_classes)]
 
 Key Features:
@@ -66,13 +66,13 @@ class AlexNetClassic(nn.Module):
             nn.Conv2d(in_channels=256, out_channels=384, kernel_size=3,
                       stride=1, padding=1),
             nn.ReLU(inplace=True),
-            
+
             # Conv3x3(384) -> ReLU
             # Input: 13x13x384 -> Output: 13x13x384
             nn.Conv2d(in_channels=384, out_channels=384, kernel_size=3,
                       stride=1, padding=1),
             nn.ReLU(inplace=True),
-            
+
             # Conv3x3(256) -> ReLU -> MaxPool
             # Input: 13x13x384 -> Output: 6x6x256
             nn.Conv2d(in_channels=384, out_channels=256, kernel_size=3,
@@ -91,7 +91,7 @@ class AlexNetClassic(nn.Module):
         # Original paper: 6x6x256 = 9216 -> 4096 -> 4096 -> num_classes
         self.classifier = nn.Sequential(
             nn.Flatten(),
-            
+
             # FC1: Dropout -> Linear(4096) -> ReLU
             nn.Dropout(p=0.5),
             nn.Linear(self.flatten_dim, 4096),
