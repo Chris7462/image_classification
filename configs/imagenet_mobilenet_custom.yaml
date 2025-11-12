@@ -1,0 +1,82 @@
+random_seed: 42
+
+dataset:
+  name: imagenet
+  data_root: /data/imagenet/dataset
+
+data_loader:
+  batch_size: 128
+  num_workers: 8
+  pin_memory: true
+  prefetch_factor: 2
+  persistent_workers: true
+
+transforms:
+  # ----- Common Settings (train/val/test) -----
+  # Transform application order:
+  # 1. Apply split-specific transforms (train/val/test)
+  # 2. If split doesn't define resize/crop, use common resize/crop
+  # 3. Apply common normalize at the end
+  common: # common setting for train/val/test
+    resize: 256
+    crop: 224
+    # ImageNet normalization - standard values
+    normalize:
+      mean: [0.485, 0.456, 0.406]
+      std: [0.229, 0.224, 0.225]
+
+  # ----- Training Augmentation -----
+  train:
+    random_resized_crop:  # this will override common resize + crop
+      size: 224
+      scale: [0.08, 1.0]  # Standard ImageNet augmentation
+      # ratio: [0.75, 1.33]  # Optional: aspect ratio range (default: [3/4, 4/3])
+    random_horizontal_flip: true
+    # Color jitter can be added for additional regularization
+    # color_jitter:
+    #   brightness: 0.2
+    #   contrast: 0.2
+    #   saturation: 0.2
+    #   hue: 0.1
+
+  # ----- Validation-Time Augmentation -----
+  # val:
+
+  # ----- Test-Time Augmentation -----
+  # test:
+  #   crop_augmentation: ten_crop  # Options: none, five_crop, ten_crop
+
+# Model config
+model:
+  backbone: mobilenet_custom
+  num_classes: 1000
+
+# Loss config
+loss:
+  type: cross_entropy
+
+# Optimizer config
+# Following MobileNetV2 paper (Section 6.1) which references MobileNetV1 setup:
+# - RMSProp optimizer with decay=0.9 and momentum=0.9
+# - Initial learning rate: 0.045
+# - Learning rate decay: 0.98 per epoch
+# - Weight decay: 0.00004
+# - Batch normalization after every layer
+optimizer:
+  type: RMSprop
+  lr: 0.045
+  weight_decay: 0.00004
+  momentum: 0.9
+
+# Scheduler config
+# Learning rate decay of 0.98 per epoch (exponential decay)
+# After 90 epochs: 0.045 * (0.98^90) ≈ 0.0075
+scheduler:
+  type: step_lr
+  step_size: 1  # Decay every epoch
+  gamma: 0.98   # Multiply by 0.98 each time
+
+# Training config
+training:
+  epochs: 90
+  device: auto
