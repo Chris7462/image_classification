@@ -12,6 +12,7 @@ Supported Models:
     - alexnet: AlexNet architecture for 227x227 images
     - alexnetclassic: Classic AlexNet (original 2012 paper)
     - squeezenet: SqueezeNet 1.0 architecture for efficient computation
+    - mobilenet_custom: MobileNetV1 with depthwise separable convolutions
     - resnet18_custom: ResNet-18 trained from scratch
     - resnet34_custom: ResNet-34 trained from scratch
     - resnet50_custom: ResNet-50 trained from scratch
@@ -45,6 +46,7 @@ from models.custom.deepergooglenet import DeeperGoogLeNet
 from models.custom.googlenet_custom import GoogLeNetCustom
 from models.custom.minigooglenet import MiniGoogLeNet
 from models.custom.minivggnet import MiniVGGNet
+from models.custom.mobilenet_custom import MobileNetCustom
 from models.custom.resnet_custom import (resnet18_custom, resnet34_custom,
                                          resnet50_custom, resnet101_custom,
                                          resnet152_custom)
@@ -114,6 +116,10 @@ def create_model(cfg):
     elif backbone == 'squeezenet_custom':
         # SqueezeNet 1.0 - efficient architecture with Fire modules
         model = SqueezeNetCustom(num_classes=num_classes)
+
+    elif backbone == 'mobilenet_custom':
+        # MobileNetV1 - efficient architecture with depthwise separable convolutions
+        model = MobileNetCustom(num_classes=num_classes)
 
     elif backbone == 'resnet18_custom':
         # Custom ResNet-18 trained from scratch
